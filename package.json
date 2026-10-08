@@ -1,0 +1,13 @@
+{
+  "name": "bsd-stem-slides",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BSD STEM Slides — a PowerPoint-style presentation editor that runs entirely in the browser.",
+  "scripts": {
+    "start": "npx --yes http-server -p 8080 -c-1 .",
+    "test": "node tests/smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

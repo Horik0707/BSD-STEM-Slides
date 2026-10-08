@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BSD STEM Slides</title>
+  <meta name="description" content="BSD STEM Slides — create and present slide decks with equations, charts, shapes and animations, right in the browser.">
+  <meta name="theme-color" content="#1F5AA6">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/material-symbols/outlined.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script defer src="vendor/katex/katex.min.js"></script>
+  <script defer src="js/util.js"></script>
+  <script defer src="js/themes.js"></script>
+  <script defer src="js/shapes.js"></script>
+  <script defer src="js/model.js"></script>
+  <script defer src="js/chart.js"></script>
+  <script defer src="js/render.js"></script>
+  <script defer src="js/ui.js"></script>
+  <script defer src="js/editor.js"></script>
+  <script defer src="js/actions.js"></script>
+  <script defer src="js/ribbon.js"></script>
+  <script defer src="js/thumbs.js"></script>
+  <script defer src="js/panes.js"></script>
+  <script defer src="js/dialogs.js"></script>
+  <script defer src="js/show.js"></script>
+  <script defer src="js/io.js"></script>
+  <script defer src="js/backstage.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header id="titlebar">
+      <div class="tb-left">
+        <div class="brand" title="BSD STEM Slides">
+          <svg id="brandLogo" class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="10" width="56" height="40" rx="7" fill="currentColor" opacity=".18"/><rect x="4" y="10" width="56" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><g fill="none" stroke="currentColor" stroke-width="2.6"><ellipse cx="32" cy="30" rx="16" ry="6.5"/><ellipse cx="32" cy="30" rx="16" ry="6.5" transform="rotate(60 32 30)"/><ellipse cx="32" cy="30" rx="16" ry="6.5" transform="rotate(120 32 30)"/></g><circle cx="32" cy="30" r="3.6" fill="#FFC53D"/><rect x="28" y="50" width="8" height="6" fill="currentColor"/><rect x="18" y="55" width="28" height="4" rx="2" fill="currentColor"/></svg>
+          <span class="brand-name">BSD STEM Slides</span>
+        </div>
+        <div class="qat" role="toolbar" aria-label="Quick access">
+          <button id="qaSave" class="qa-btn" type="button" title="Save (Ctrl+S)" aria-label="Save"><span class="ms">save</span></button>
+          <button id="qaUndo" class="qa-btn" type="button" title="Undo (Ctrl+Z)" aria-label="Undo"><span class="ms">undo</span></button>
+          <button id="qaRedo" class="qa-btn" type="button" title="Redo (Ctrl+Y)" aria-label="Redo"><span class="ms">redo</span></button>
+          <button id="qaPresent" class="qa-btn" type="button" title="Start From Beginning (F5)" aria-label="Start slide show from beginning"><span class="ms">slideshow</span></button>
+        </div>
+      </div>
+      <div class="tb-center">
+        <input id="deckTitle" class="deck-title" aria-label="Presentation name" spellcheck="false" autocomplete="off">
+        <span id="saveState" class="save-state"></span>
+      </div>
+      <div class="tb-right">
+        <button id="qaHelp" class="qa-btn" type="button" title="Keyboard shortcuts" aria-label="Keyboard shortcuts"><span class="ms">keyboard</span></button>
+        <button id="qaShare" class="tb-pill" type="button" title="Download or export a copy"><span class="ms">ios_share</span><span>Share</span></button>
+        <div class="split-pill">
+          <button id="presentBtn" class="tb-pill primary" type="button" title="Present from current slide (Shift+F5)"><span class="ms">play_arrow</span><span>Present</span></button>
+          <button id="presentMenu" class="tb-pill primary drop" type="button" aria-label="Slide show options"><span class="ms">expand_more</span></button>
+        </div>
+      </div>
+    </header>
+
+    <div id="ribbonWrap">
+      <div class="tabs-row">
+        <nav id="tabs" role="tablist" aria-label="Ribbon tabs"></nav>
+        <button id="ribbonToggle" class="icon-btn" type="button" aria-label="Collapse the ribbon"></button>
+      </div>
+      <div id="ribbon"><div id="ribbon-body" role="toolbar"></div></div>
+    </div>
+
+    <main id="workspace">
+      <aside id="thumbs" aria-label="Slides">
+        <div id="thumbList" role="listbox" tabindex="0" aria-label="Slide thumbnails"></div>
+        <button id="thumbAdd" class="thumb-add" type="button"><span class="ms">add</span><span>New Slide</span></button>
+      </aside>
+      <section id="center">
+        <div id="stage" tabindex="-1">
+          <div id="stageInner">
+            <div id="slideWrap">
+              <div id="slideHost"></div>
+              <div id="gridLayer" hidden></div>
+              <div id="overlay"></div>
+            </div>
+          </div>
+        </div>
+        <div id="notesSplit" role="separator" aria-orientation="horizontal" title="Drag to resize notes"></div>
+        <div id="notesPane"><textarea id="notesInput" placeholder="Click to add notes" aria-label="Speaker notes"></textarea></div>
+      </section>
+      <div id="sorter" role="listbox" tabindex="0" aria-label="Slide sorter"></div>
+      <aside id="sidepane" hidden></aside>
+    </main>
+
+    <footer id="statusbar"></footer>
+  </div>
+
+  <div id="backstage" hidden></div>
+  <div id="show" hidden></div>
+  <div id="modalRoot"></div>
+  <div id="toastRoot" aria-live="polite"></div>
+  <div id="printRoot"></div>
+  <noscript><div class="noscript">BSD STEM Slides needs JavaScript turned on.</div></noscript>
+</body>
+</html>
