@@ -29,7 +29,7 @@ src, out, root = sys.argv[1], sys.argv[2], sys.argv[3]
 cands = set()
 for f in glob.glob(root + '/js/*.js') + [root + '/index.html', root + '/css/app.css']:
     t = open(f, encoding='utf8').read()
-    cands |= set(re.findall(r"['\">`]([a-z][a-z0-9_]{1,40})['\"<`]", t))
+    cands |= set(re.findall(r"['\">`]([a-z0-9][a-z0-9_]{1,40})['\"<`]", t))
 font = TTFont(src)
 cmap = font.getBestCmap()
 g2c = {v: chr(k) for k, v in cmap.items()}

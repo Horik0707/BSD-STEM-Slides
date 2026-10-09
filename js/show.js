@@ -209,6 +209,10 @@
     };
     buildDom(root);
     B.media.showStart({ muted: st.audienceMode }); // the projector window stays silent; sound comes from the presenter
+    B.model3d.onPose = (id, pose) => {
+      // mirror the presenter's view of a 3D model on the projector
+      if (st && st.audience && !st.audience.closed) st.audience.postMessage({ t: 'pose', id, pose }, location.origin);
+    };
     document.addEventListener('keydown', onKey, true);
     window.addEventListener('resize', onResize);
     if (!st.reading && !st.audienceMode && !st.presenter) {
@@ -806,7 +810,7 @@
     stage.addEventListener('pointerdown', (e) => {
       if (!st || e.button !== 0 || st.transitioning || st.overview) return;
       if (st.tool !== 'pointer' && st.tool !== 'laser') return;
-      if (e.target.closest('.show-toolbar, .show-overview, .aud-fs, iframe, video, a, .has-link, .el-audio')) return;
+      if (e.target.closest('.show-toolbar, .show-overview, .aud-fs, iframe, video, a, .has-link, .el-audio, .m3d-interactive')) return;
       const book = B.isBook(st.deck);
       if (!book && e.pointerType !== 'touch') return; // slides: swipe on touch screens only
       s = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId, dx: 0, dragging: false, book };
@@ -978,6 +982,8 @@
     clearInterval(st.clock);
     st.autoToken++;
     B.media.showStop();
+    B.model3d.onPose = null;
+    B.model3d.disposeAll();
     document.removeEventListener('keydown', onKey, true);
     window.removeEventListener('resize', onResize);
     document.removeEventListener('fullscreenchange', onFsChange);
@@ -1069,7 +1075,8 @@
         st.dom.curtain.style.background = m.black || '';
         st.ended = m.ended;
         st.dom.end.hidden = !m.ended;
-      } else if (m.t === 'end') window.close();
+      } else if (m.t === 'pose') B.model3d.setPose(m.id, m.pose);
+      else if (m.t === 'end') window.close();
     });
     if (window.opener) window.opener.postMessage({ t: 'ready' }, location.origin);
     else wait.textContent = 'Open this window from Presenter View in BSD STEM Slides.';

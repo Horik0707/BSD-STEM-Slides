@@ -142,6 +142,9 @@
       case 'audio':
         B.media.render(n, el, ctx);
         break;
+      case 'model3d':
+        B.model3d.render(n, el, ctx);
+        break;
     }
     return n;
   };

@@ -17,7 +17,7 @@
     const n = same.indexOf(el) + 1;
     const base =
       el.placeholder === 'title' ? 'Title' : el.placeholder === 'subtitle' ? 'Subtitle' : el.placeholder ? 'Content Placeholder'
-        : el.type === 'text' ? 'TextBox' : el.type === 'shape' ? B.shapeById(el.shape).name : el.type === 'image' ? 'Picture' : el.type === 'audio' ? 'Audio'
+        : el.type === 'text' ? 'TextBox' : el.type === 'shape' ? B.shapeById(el.shape).name : el.type === 'image' ? 'Picture' : el.type === 'audio' ? 'Audio' : el.type === 'model3d' ? '3D Model'
           : el.type[0].toUpperCase() + el.type.slice(1);
     const txt = el.html ? U.htmlToText(el.html).slice(0, 28) : el.latex ? el.latex.slice(0, 24) : '';
     return { name: `${base} ${n}`, text: txt };
@@ -271,6 +271,32 @@
           field('Size (pt)', num(el.size, (v) => set('size', U.clamp(v, 6, 200)), { dec: 0 })),
           field('Color', colorField(el.color, (c) => set('color', c), { allowNone: false, allowAuto: true })),
           edit,
+        ])
+      );
+    }
+
+    if (el.type === 'model3d' && els.length === 1) {
+      const chk = (label, key, dflt) => {
+        const i = h('input', { type: 'checkbox' });
+        i.checked = el[key] == null ? dflt : !!el[key];
+        i.addEventListener('change', () => set(key, i.checked));
+        return h('label', { class: 'pane-check' }, i, h('span', {}, label));
+      };
+      const rot = h('div', { class: 'grid2' },
+        field('Turn left/right (°)', num(el.rotY || 0, (v) => set('rotY', Math.round(v) % 360), { dec: 0 })),
+        field('Tilt up/down (°)', num(el.rotX || 0, (v) => set('rotX', U.clamp(Math.round(v), -90, 90)), { dec: 0 })),
+        field('Roll (°)', num(el.rotZ || 0, (v) => set('rotZ', Math.round(v) % 360), { dec: 0 })),
+        field('Zoom', num(el.zoom || 1, (v) => set('zoom', U.clamp(v, 0.3, 4)), { step: 0.1 })));
+      body.appendChild(
+        section('3D Model', [
+          rot,
+          field('Color', colorField(el.color, (c) => set('color', c), { allowNone: false })),
+          chk('Use colors from the file', 'useFileColors', true),
+          chk('Wireframe', 'wireframe', false),
+          chk('Interactive in slide show', 'interactive', true),
+          field('Spin', selectEl([['none', 'Off'], ['slow', 'Slow'], ['medium', 'Medium'], ['fast', 'Fast']], el.spin || 'slow', (v) => set('spin', v))),
+          chk('Spin in manual shows too', 'spinManual', false),
+          h('p', { class: 'help' }, 'Automatic (timed) slide shows spin the model at this speed. Manual shows let you drag it to rotate.'),
         ])
       );
     }

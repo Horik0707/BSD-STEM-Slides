@@ -189,8 +189,8 @@
       window.removeEventListener('afterprint', done);
     };
     window.addEventListener('afterprint', done);
-    // let images & fonts settle before opening the print dialog
-    setTimeout(() => window.print(), 350);
+    // let images, fonts and 3D model renders settle before opening the print dialog
+    Promise.race([B.model3d.idle(), new Promise((r) => setTimeout(r, 6000))]).then(() => setTimeout(() => window.print(), 350));
   };
 
   IO.exportOutline = () => {
@@ -561,6 +561,10 @@
           } else if (el.type === 'equation') {
             // PowerPoint can't read LaTeX; export a picture of the formula when possible, else linear text
             slide.addText(IO.latexToText(el.latex), Object.assign({}, b, { rotate, fontFace: 'Cambria Math', fontSize: el.size || 32, color: hex(B.resolveColor(el.color, theme) || theme.text), align: el.align || 'center', valign: 'middle', italic: false }));
+          } else if (el.type === 'model3d') {
+            // PowerPoint export carries a picture of the model's current view
+            const png = await B.model3d.png(el, theme, el.w * 2, el.h * 2).catch(() => null);
+            if (png) slide.addImage(Object.assign({}, b, { data: png, rotate, altText: el.alt || el.name || '3D model' }));
           } else if (el.type === 'audio') {
             const data = A.assets[el.asset];
             if (!data) continue;

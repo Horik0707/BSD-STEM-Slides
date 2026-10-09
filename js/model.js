@@ -51,6 +51,7 @@
     }),
     equation: () => ({ latex: 'E = mc^2', size: 32, color: null }),
     video: () => ({ src: '', kind: 'youtube', fill: '#000000' }),
+    model3d: () => ({ asset: null, format: 'obj', name: '3D Model', w: 360, h: 300, color: '@accent1', rotX: 15, rotY: -25, rotZ: 0, zoom: 1, wireframe: false, useFileColors: true, interactive: true, spin: 'slow', spinManual: false }),
     audio: () => ({ asset: null, name: 'Audio', w: 64, h: 64, fill: '@accent1', start: 'click', volume: 1, loop: false, across: false, hide: false, rewind: true }),
   };
 

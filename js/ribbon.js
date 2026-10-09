@@ -485,6 +485,14 @@
       group('Illustrations', [
         bigBtn({ icon: 'interests', label: 'Shapes', menu: () => RB.shapesPanel((id) => AC().insertShape(id)) }),
         bigBtn({ icon: 'bar_chart', label: 'Chart', menu: chartMenu }),
+        bigBtn({
+          icon: 'view_in_ar', label: '3D Models',
+          menu: () => [
+            { label: 'This Device… (OBJ, STL)', icon: 'upload_file', action: () => B.model3d.pickAndInsert() },
+            { sep: true },
+            { header: 'Sample models' },
+          ].concat(B.model3d.SAMPLES.map((s) => ({ label: s.name, icon: s.icon, action: () => B.model3d.insertSample(s.id) }))),
+        }),
         bigBtn({ icon: 'account_tree', label: 'Diagram', title: 'Insert a ready-made STEM diagram', menu: () => B.dialogs.DIAGRAMS.map((d) => ({ label: d.name, icon: d.icon, action: () => B.dialogs.insertDiagram(d.id) })) }),
       ]),
       group('Text', [
@@ -743,6 +751,51 @@
       sizeGroup(),
     ],
 
+    model3d: () => {
+      const m = () => sel()[0] || {};
+      const set = (k, v) => E().setProp(k, v, (e) => e.type === 'model3d');
+      const view = (rx, ry) => {
+        sel().filter((e) => e.type === 'model3d').forEach((e) => Object.assign(e, { rotX: rx, rotY: ry, rotZ: 0 }));
+        E().changed(true);
+      };
+      return [
+        group('3D Model Views', [
+          gallery({
+            cls: 'effects views3d',
+            items: () => B.model3d.VIEWS.map(([id, name]) => ({ id, title: name, html: `${U.icon('view_in_ar')}<span>${name.replace('Above Front ', '↗ ')}</span>` })),
+            onPick: (id) => {
+              const v = B.model3d.VIEWS.find((x) => x[0] === id);
+              view(v[2], v[3]);
+            },
+            active: () => (B.model3d.VIEWS.find((v) => v[2] === (m().rotX || 0) && v[3] === (m().rotY || 0)) || [])[0],
+          }),
+        ]),
+        group('Adjust', [
+          bigBtn({ icon: 'restart_alt', label: 'Reset Model', action: () => { sel().forEach((e) => Object.assign(e, { rotX: 15, rotY: -25, rotZ: 0, zoom: 1 })); E().changed(true); } }),
+          col(
+            smallBtn({ icon: 'swap_horiz', label: 'Change Model…', action: () => B.model3d.replace(m()) }),
+            smallBtn({ icon: 'zoom_in', label: 'Zoom In', action: () => set('zoom', U.clamp((m().zoom || 1) * 1.2, 0.3, 4)) }),
+            smallBtn({ icon: 'zoom_out', label: 'Zoom Out', action: () => set('zoom', U.clamp((m().zoom || 1) / 1.2, 0.3, 4)) })
+          ),
+          col(
+            colorBtn({ icon: 'format_color_fill', label: 'Model Color', title: 'Model Color', default: '@accent1', onPick: (c) => c !== 'none' && set('color', c) }),
+            check({ label: 'Use colors from file', title: 'OBJ parts named after colors (e.g. “red”) keep them', value: () => m().useFileColors !== false, onChange: (v) => set('useFileColors', v) }),
+            check({ label: 'Wireframe', value: () => !!m().wireframe, onChange: (v) => set('wireframe', v) })
+          ),
+        ]),
+        group('Slide Show', [
+          col(
+            check({ label: 'Interactive (drag to rotate, scroll to zoom)', value: () => m().interactive !== false, onChange: (v) => set('interactive', v) }),
+            h('label', { class: 'rb-numfield' }, h('span', { html: U.icon('autorenew') }), h('span', { class: 'rb-num-label' }, 'Spin'),
+              select({ title: 'Spin speed', width: 120, options: [{ value: 'none', label: 'Off' }, { value: 'slow', label: 'Slow' }, { value: 'medium', label: 'Medium' }, { value: 'fast', label: 'Fast' }], value: () => m().spin || 'slow', onChange: (v) => set('spin', v) })),
+            check({ label: 'Spin in manual shows too', title: 'Automatic (timed) shows always use the spin', value: () => !!m().spinManual, onChange: (v) => set('spinManual', v) })
+          ),
+        ]),
+        arrangeGroup(),
+        sizeGroup(),
+      ];
+    },
+
     audio: () => {
       const a = () => sel()[0] || {};
       const set = (k, v) => E().setProp(k, v, (e) => e.type === 'audio');
@@ -943,6 +996,7 @@
     if (els.length === 1 && els[0].type === 'table') t.push(['table', 'Table Design']);
     if (els.length === 1 && els[0].type === 'chart') t.push(['chart', 'Chart Design']);
     if (els.length === 1 && els[0].type === 'audio') t.push(['audio', 'Playback']);
+    if (els.length === 1 && els[0].type === 'model3d') t.push(['model3d', '3D Model']);
     return t;
   };
 
@@ -1035,7 +1089,7 @@
     lastShape = shape;
   });
   B.on('inserted', (el) => {
-    const tab = { shape: 'shape', image: 'picture', table: 'table', chart: 'chart', audio: 'audio' }[el.type];
+    const tab = { shape: 'shape', image: 'picture', table: 'table', chart: 'chart', audio: 'audio', model3d: 'model3d' }[el.type];
     if (!tab) return;
     RB.update();
     if (contextualTabs().some((t) => t[0] === tab)) RB.show(tab);

@@ -195,6 +195,8 @@
         box.appendChild(U.h('div', { class: 'handle rot', 'data-h': 'rot', title: 'Rotate (Shift snaps to 15°)', html: U.icon('rotate_right') }));
       }
       overlay.appendChild(box);
+      // 3D models get a centre handle that turns the model itself (PowerPoint's 3D rotate)
+      if (el.type === 'model3d' && !el.locked) box.appendChild(U.h('div', { class: 'handle rot3d', 'data-h': 'rot3d', title: 'Drag to rotate the model in 3D', html: U.icon('3d_rotation') }));
       // audio clips get a small player under the icon, like PowerPoint
       if (el.type === 'audio') overlay.appendChild(B.media.editorBar(el, el.x * s + (el.w * s) / 2 - Math.max(190, el.w * s) / 2, (el.y + el.h) * s + 8, el.w * s));
       return;
@@ -364,6 +366,7 @@
       if (/^image\//.test(f.type)) await E.insertImageFile(f, p);
       else if (/^video\//.test(f.type)) await E.insertVideoFile(f, p);
       else if (/^audio\//.test(f.type) || /\.(mp3|wav|m4a|ogg|opus|flac)$/i.test(f.name)) await B.media.insertFile(f, p);
+      else if (/\.(obj|stl)$/i.test(f.name)) await B.model3d.insertFile(f, p);
       else if (/\.(pptx|bsdslides|json)$/i.test(f.name)) return B.io.openFile(f);
     }
   }
@@ -469,6 +472,7 @@
     const els = B.selectedEls();
     if (!els.length) return;
     if (h === 'rot') return startRotate(e, els[0]);
+    if (h === 'rot3d') return startRotate3d(e, els[0]);
     if (h === 'p1' || h === 'p2') return startEndpoint(e, els[0], h);
     if (els.length === 1) return startResize(e, els[0], h);
     return startGroupResize(e, els, h);
@@ -585,6 +589,19 @@
         if (n) n.style.transform = el.rot ? `rotate(${el.rot}deg)` : '';
         E.drawSelection();
         B.emit('rotate-live', el.rot);
+      },
+      () => E.changed()
+    );
+  }
+
+  function startRotate3d(e, el) {
+    const p0 = { x: e.clientX, y: e.clientY }, r0 = { x: el.rotX || 0, y: el.rotY || 0 };
+    track(
+      e,
+      (ev) => {
+        el.rotY = Math.round(r0.y + (ev.clientX - p0.x) * 0.6) % 360;
+        el.rotX = U.clamp(Math.round(r0.x + (ev.clientY - p0.y) * 0.6), -90, 90);
+        B.model3d.repaintNode(E.node(el.id), el, B.theme());
       },
       () => E.changed()
     );

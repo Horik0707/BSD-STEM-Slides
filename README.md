@@ -29,6 +29,12 @@ Presentations save automatically in the browser you're using. To move work to an
 - Charts (column, bar, line, area, pie, doughnut and scatter with a trendline) with a spreadsheet-style data editor. You can paste cells from Excel or Google Sheets, or import a CSV.
 - **Equations**: a LaTeX editor with a live preview, a template palette and common formulas (quadratic formula, Newton's laws, photosynthesis and more).
 - Symbol picker (Greek, math, arrows, science, super/subscript), WordArt, and YouTube or local video.
+- **3D models** (Insert ▸ 3D Models): add `.obj` or `.stl` files, or a built-in sample (water and methane molecules, DNA double helix, torus knot, icosahedron). Move, resize and rotate them like any object. Drag the center handle to turn the model in 3D, or pick a view (front, top, isometric…) on the 3D Model tab, which also has zoom, color, wireframe and spin options.
+  - In a manual slide show, viewers can drag to rotate, scroll or pinch to zoom, and double-click to reset.
+  - Automatic (timed) shows spin the model slowly, medium or fast. You can turn the spin on in manual shows too.
+  - In presenter view, the audience window follows your rotation.
+  - OBJ parts named after colors (e.g. `usemtl red`) keep their color.
+  - PowerPoint export and print use a picture of the current view.
 - **Audio** (Insert ▸ Audio): upload a sound file (MP3, WAV, M4A, OGG and more) or **record from your microphone**. A speaker icon goes on the slide with a play bar. The Playback tab sets how it starts (When Clicked On, On Next Click, Automatically), volume, loop, play across slides, hide during show and rewind. Recordings are converted to WAV when exported, so they play in PowerPoint.
 - STEM diagrams: process, cycle, Venn, timeline, hierarchy, atom model and coordinate axes.
 - Ten themes with matching colors and fonts, custom slide backgrounds (solid, gradient, picture), 16:9, 4:3 or 8.5 × 11 book pages, slide numbers and footers.
@@ -72,11 +78,13 @@ js/ribbon.js        Ribbon tabs and controls
 js/thumbs.js        Thumbnails pane, slide sorter, notes, status bar
 js/panes.js         Format, Animation and Background side panes
 js/dialogs.js       Equation, symbol, chart data, video, find/replace and other dialogs
+js/media.js         Audio clips: speaker icon, preview, show playback, recorder
+js/model3d.js       3D models: OBJ/STL loading, still renders, interactive/spinning viewers
 js/show.js          Slide show, transitions, animations, ink, presenter & audience windows
 js/io.js            Autosave, .bsdslides files, PowerPoint import/export, print/PDF
 js/backstage.js     File menu
 js/app.js           Startup, keyboard shortcuts, clipboard
-vendor/             KaTeX, PptxGenJS (with JSZip), Material Symbols (subset)
+vendor/             KaTeX, PptxGenJS (with JSZip), three.js, Material Symbols (subset)
 tools/              Icon-font subsetting script
 tests/smoke.mjs     End-to-end smoke test
 ```
@@ -97,5 +105,6 @@ If you use a new icon name from [Material Symbols](https://fonts.google.com/icon
 - [KaTeX](https://katex.org) (MIT) renders equations.
 - [PptxGenJS](https://gitbrent.github.io/PptxGenJS/) (MIT), which bundles [JSZip](https://stuk.github.io/jszip/), handles PowerPoint export and import.
 - [Material Symbols](https://fonts.google.com/icons) (Apache 2.0) provides the icons.
+- [three.js](https://threejs.org) r147 (MIT) renders 3D models and loads OBJ/STL. It only loads when a deck has a 3D model.
 
 The license files for these libraries are in `vendor/`.

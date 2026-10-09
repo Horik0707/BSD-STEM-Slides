@@ -330,6 +330,11 @@
       if (one && B.model.isTextual(one)) items.push({ label: 'Edit Text', icon: 'edit', action: () => E.startEdit(one.id, { selectAll: false }) });
       if (one && one.type === 'chart') items.push({ label: 'Edit Data…', icon: 'table_chart', action: () => B.dialogs.chart(one) });
       if (one && one.type === 'equation') items.push({ label: 'Edit Equation…', icon: 'functions', action: () => B.dialogs.equation(one) });
+      if (one && one.type === 'model3d')
+        items.push(
+          { label: 'Reset 3D Model', icon: 'restart_alt', action: () => { Object.assign(one, { rotX: 15, rotY: -25, rotZ: 0, zoom: 1 }); E.changed(true); } },
+          { label: 'Change 3D Model…', icon: 'swap_horiz', action: () => B.model3d.replace(one) }
+        );
       if (one && one.type === 'audio')
         items.push(
           { label: B.media.isPreviewing(one.id) ? 'Pause' : 'Play', icon: B.media.isPreviewing(one.id) ? 'pause' : 'play_arrow', action: () => B.media.togglePreview(one) },

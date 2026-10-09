@@ -23,7 +23,8 @@ const check = (name, ok, detail = '') => {
   if (!ok) failures.push(name);
 };
 
-const browser = await chromium.launch();
+// software WebGL so the 3D model checks work on machines without a GPU
+const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true })).newPage();
 const errors = [];
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -95,6 +96,11 @@ try {
     BSD.media.insertData('data:audio/wav;base64,' + btoa(s), 'Beep');
   });
   check('inserts an audio clip with a speaker icon and Playback tab', (await ev(() => BSD.selectedEls()[0].type)) === 'audio' && (await ev(() => BSD.ribbon.active())) === 'audio' && (await page.locator('#overlay .audio-bar').count()) === 1);
+
+  // 3D model: insert a sample, it renders on the slide and the 3D Model tab opens
+  await ev(() => BSD.model3d.insertSample('water'));
+  await page.waitForFunction(() => { const n = document.querySelector('#slideHost .el-model3d'); return n && !n.classList.contains('m3d-loading'); }, null, { timeout: 15000 });
+  check('inserts and renders a 3D model', (await ev(() => BSD.selectedEls()[0].type)) === 'model3d' && (await ev(() => BSD.ribbon.active())) === 'model3d' && (await page.locator('#slideHost .el-model3d.m3d-error').count()) === 0);
 
   // automatic (timed) slide show advances on its own
   await ev(() => { BSD.app.deck.showMode = 'auto'; BSD.app.deck.slideDuration = 1; BSD.show.start(0); });

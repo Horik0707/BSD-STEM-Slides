@@ -822,3 +822,14 @@ body.audience-mode #app { display: none; }
 #show.auto-paused .auto-bar i { background: #f59f00; }
 #show.book .auto-bar { bottom: 40px; left: 50%; width: min(520px, 80%); transform: translateX(-50%); right: auto; background: transparent; }
 .setup-sec::placeholder { color: var(--muted); opacity: 0.55; }
+
+/* ---------- 3D models ---------- */
+.el-model3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.el-model3d.m3d-loading::before { content: 'view_in_ar'; font-family: 'Material Symbols Outlined'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 48px; color: rgba(127, 127, 127, 0.6); }
+.el-model3d.m3d-error { outline: 1px dashed rgba(200, 60, 60, 0.7); }
+.el-model3d.m3d-error::after { content: attr(data-error); position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; text-align: center; font: 12px/1.3 'Segoe UI', sans-serif; color: #c33; }
+.mode-show .m3d-interactive canvas { cursor: grab; touch-action: none; }
+.mode-show .m3d-interactive canvas:active { cursor: grabbing; }
+.handle.rot3d { left: 50%; top: 50%; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; cursor: move; color: var(--sel); background: rgba(255, 255, 255, 0.92); }
+.handle.rot3d .ms { font-size: 22px; }
+.rb-gallery.views3d .rb-gal-item { width: 92px; }
