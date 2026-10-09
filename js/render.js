@@ -63,16 +63,13 @@
     s.style.fontFamily = B.fontStack(theme.body);
     s.style.color = theme.text;
 
-    if (!slide.hideDecor) {
-      const decor = (slide.layout === 'title' || slide.layout === 'section') && theme.titleDecor ? theme.titleDecor : theme.decor;
-      for (const d of decor || []) {
-        s.appendChild(
-          U.h('div', {
-            class: 'decor',
-            style: { left: d.x * deck.w + 'px', top: d.y * deck.h + 'px', width: d.w * deck.w + 'px', height: d.h * deck.h + 'px', background: B.resolveColor(d.color, theme) },
-          })
-        );
-      }
+    for (const d of B.decorFor(slide, theme, deck)) {
+      s.appendChild(
+        U.h('div', {
+          class: 'decor',
+          style: { left: d.x * deck.w + 'px', top: d.y * deck.h + 'px', width: d.w * deck.w + 'px', height: d.h * deck.h + 'px', background: B.resolveColor(d.color, theme) },
+        })
+      );
     }
     for (const el of slide.elements) {
       try {

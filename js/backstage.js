@@ -5,6 +5,7 @@
   const h = U.h;
   const BS = (B.backstage = {});
   let page = 'home';
+  let newSize = U.storage.get('newSize', '16:9');
 
   BS.open = (p = 'home') => {
     if (A.editingId) B.editor.endEdit();
@@ -58,37 +59,56 @@
   const logo = () => U.$('#brandLogo') ? U.$('#brandLogo').outerHTML.replace('id="brandLogo"', '') : '';
 
   function themeCard(theme, label, onClick, sample) {
-    const d = { theme: theme.id, w: 960, h: 540, slides: [] };
-    const s = sample || { layout: 'title', elements: B.layoutElements('title', 960, 540).map((p) => M.newElement('text', p)) };
+    const dim = B.PAGE_SIZES[newSize];
+    const d = { theme: theme.id, w: dim.w, h: dim.h, slides: [] };
+    const s = sample || { layout: 'title', elements: B.layoutElements('title', dim.w, dim.h).map((p) => M.newElement('text', p)) };
     if (!sample) {
       s.elements[0].html = `<div>${U.esc(theme.name)}</div>`;
-      s.elements[1].html = '<div>Presentation</div>';
+      s.elements[1].html = `<div>${newSize === 'book' ? 'Book' : 'Presentation'}</div>`;
     }
     d.slides.push(s);
-    const b = h('button', { class: 'bs-card', type: 'button', title: label }, R.thumb(s, 208, { deck: d, index: 0 }), h('span', {}, label));
+    const b = h('button', { class: 'bs-card', type: 'button', title: label }, R.thumb(s, newSize === 'book' ? 150 : 208, { deck: d, index: 0 }), h('span', {}, label));
     b.addEventListener('click', onClick);
     return b;
   }
 
+  /** Slides (16:9) / Book (8.5 × 11) switch shown above the New gallery. */
+  function sizeSwitch() {
+    const wrap = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Format' });
+    [['16:9', 'slideshow', 'Slides', '16:9 widescreen'], ['4:3', 'crop_landscape', 'Standard', '4:3'], ['book', 'menu_book', 'Book', '8.5 × 11 in · pages turn sideways']].forEach(([k, icon, label, sub]) => {
+      const b = h('button', { class: 'seg-btn' + (newSize === k ? ' on' : ''), type: 'button', role: 'radio', 'aria-checked': newSize === k, html: U.icon(icon) + `<span><b>${label}</b><small>${sub}</small></span>` });
+      b.addEventListener('click', () => {
+        newSize = k;
+        U.storage.set('newSize', k);
+        render();
+      });
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+
   function newRow(limit) {
-    const row = h('div', { class: 'bs-cards' });
+    const row = h('div', { class: 'bs-cards' + (newSize === 'book' ? ' book' : '') });
+    const book = newSize === 'book';
     row.appendChild(
-      themeCard(B.themeById('office'), 'Blank Presentation', () => {
-        B.io.newDeck('office');
+      themeCard(B.themeById('office'), book ? 'Blank Book' : 'Blank Presentation', () => {
+        B.io.newDeck('office', false, newSize);
         BS.close();
       })
     );
-    const sample = M.sampleDeck();
-    row.appendChild(
-      themeCard(B.themeById('bsd'), 'Welcome Tour', () => {
-        B.io.newDeck(null, true);
-        BS.close();
-      }, sample.slides[0])
-    );
+    if (newSize !== '4:3') {
+      const sample = book ? M.sampleBook() : M.sampleDeck();
+      row.appendChild(
+        themeCard(B.themeById(sample.theme), book ? 'Book Tour' : 'Welcome Tour', () => {
+          B.io.newDeck(null, true, newSize);
+          BS.close();
+        }, sample.slides[0])
+      );
+    }
     B.THEMES.filter((t) => t.id !== 'office').slice(0, limit || 99).forEach((t) =>
       row.appendChild(
         themeCard(t, t.name, () => {
-          B.io.newDeck(t.id);
+          B.io.newDeck(t.id, false, newSize);
           BS.close();
         })
       )
@@ -108,8 +128,9 @@
     for (const m of items) {
       Object.assign(A.assets, m.firstAssets || {});
       const d = { theme: m.theme, w: m.w || 960, h: m.h || 540, slides: [m.first], slideNumbers: false };
+      const tw = d.h > d.w ? 66 : 112;
       const row = h('div', { class: 'bs-recent' + (A.deck && m.id === A.deck.id ? ' current' : '') });
-      const open = h('button', { class: 'bs-recent-open', type: 'button' }, m.first ? R.thumb(m.first, 112, { deck: d, index: 0 }) : h('span'), h('span', { class: 'bs-recent-text' }, h('b', {}, m.title || 'Untitled'), h('small', {}, `${U.fmtDate(m.updated)} · ${m.slides || 1} slide${m.slides === 1 ? '' : 's'}${A.deck && m.id === A.deck.id ? ' · open now' : ''}`)));
+      const open = h('button', { class: 'bs-recent-open', type: 'button' }, m.first ? R.thumb(m.first, tw, { deck: d, index: 0 }) : h('span'), h('span', { class: 'bs-recent-text' }, h('b', {}, m.title || 'Untitled'), h('small', {}, `${U.fmtDate(m.updated)} · ${m.slides || 1} ${d.h > d.w ? 'page' : 'slide'}${m.slides === 1 ? '' : 's'}${A.deck && m.id === A.deck.id ? ' · open now' : ''}`)));
       open.addEventListener('click', async () => {
         if (!A.deck || m.id !== A.deck.id) await B.io.openStored(m.id);
         BS.close();
@@ -136,7 +157,7 @@
   }
 
   function home(main) {
-    main.append(h('h1', {}, greeting()), h('h2', {}, 'New'), newRow(5));
+    main.append(h('h1', {}, greeting()), h('h2', {}, 'New'), sizeSwitch(), newRow(5));
     const more = h('button', { class: 'link-btn', type: 'button', html: 'More themes ' + U.icon('arrow_forward') });
     more.addEventListener('click', () => {
       page = 'new';
@@ -150,7 +171,7 @@
   }
 
   function newPage(main) {
-    main.append(h('h1', {}, 'New'), h('p', { class: 'bs-lead' }, 'Pick a theme to start. You can change it any time on the Design tab.'), newRow());
+    main.append(h('h1', {}, 'New'), h('p', { class: 'bs-lead' }, 'Pick a format and a theme. You can change both any time on the Design tab.'), sizeSwitch(), newRow());
   }
 
   function openPage(main) {

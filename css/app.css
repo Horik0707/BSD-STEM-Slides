@@ -758,3 +758,24 @@ body.audience-mode #app { display: none; }
   .deck-title { width: 100%; }
 }
 .noscript { padding: 40px; font-size: 18px; text-align: center; }
+
+/* ---------- book format ---------- */
+.seg { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.seg-btn { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 8px 14px 8px 10px; text-align: left; }
+.seg-btn > .ms { font-size: 26px; color: var(--muted); }
+.seg-btn span:last-child { display: flex; flex-direction: column; }
+.seg-btn small { color: var(--muted); font-size: 11px; }
+.seg-btn:hover { background: var(--hover); }
+.seg-btn.on { border-color: var(--sel); background: var(--on); }
+.seg-btn.on > .ms { color: var(--brand); }
+.bs-cards.book { align-items: flex-end; }
+#show.book { background: #161616; }
+#show.book .show-box { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55); }
+#show.book .show-stage { padding-bottom: 44px; touch-action: pan-y; }
+#show.book .show-layer.page-edge { box-shadow: -14px 0 28px rgba(0, 0, 0, 0.35); }
+.book-footer { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: min(520px, 80%); display: flex; align-items: center; gap: 12px; color: #9a9a9a; font-size: 13px; font-variant-numeric: tabular-nums; pointer-events: none; z-index: 2; }
+.bf-track { flex: 1; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.bf-track i { display: block; height: 100%; background: #c9c9c9; border-radius: 3px; transition: width 0.35s ease; }
+.bf-page { white-space: nowrap; }
+.bf-pct { min-width: 36px; text-align: right; }
+#show.presenter.book .book-footer { bottom: 6px; }

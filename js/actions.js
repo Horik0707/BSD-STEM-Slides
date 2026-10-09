@@ -481,19 +481,45 @@
     B.emit('deck');
   };
 
-  AC.setSlideSize = (ratio) => {
-    const H = ratio === '4:3' ? 720 : 540;
-    if (A.deck.h === H) return;
-    const ys = H / A.deck.h;
-    A.deck.h = H;
-    A.deck.slides.forEach((s) =>
-      s.elements.forEach((el) => {
-        // keep elements centred vertically in the new space
-        el.y = Math.round((el.y + el.h / 2) * ys - el.h / 2);
-      })
-    );
+  /** Change page size: '16:9', '4:3' or 'book' (8.5 × 11 portrait). */
+  AC.setSlideSize = (key) => {
+    const dim = B.PAGE_SIZES[key];
+    const deck = A.deck;
+    if (!dim || (deck.w === dim.w && deck.h === dim.h)) return;
+    if (A.editingId) E().endEdit(true);
+    const W0 = deck.w, H0 = deck.h;
+    const flip = B.isBook(deck) !== dim.h > dim.w;
+    deck.w = dim.w;
+    deck.h = dim.h;
+    const s = Math.min(dim.w / W0, dim.h / H0);
+    deck.slides.forEach((slide) => {
+      const fresh = B.layoutElements(slide.layout, dim.w, dim.h);
+      const count = {};
+      slide.elements.forEach((el) => {
+        if (!flip) {
+          // same orientation: keep things centred vertically in the new space
+          el.y = Math.round((el.y + el.h / 2) * (dim.h / H0) - el.h / 2);
+          return;
+        }
+        const n = el.placeholder ? (count[el.placeholder] = (count[el.placeholder] || 0) + 1) : 0;
+        const tpl = el.placeholder && fresh.filter((f) => f.placeholder === el.placeholder)[n - 1];
+        if (tpl) {
+          // placeholders flow into the matching spot of the new layout
+          ['x', 'y', 'w', 'h', 'size', 'align', 'valign'].forEach((k) => (el[k] = tpl[k]));
+          return;
+        }
+        // everything else is scaled to fit and centred ("ensure fit")
+        el.x = Math.round(el.x * s + (dim.w - W0 * s) / 2);
+        el.y = Math.round(el.y * s + (dim.h - H0 * s) / 2);
+        el.w = Math.round(el.w * s);
+        el.h = Math.round(el.h * s);
+        if (el.size) el.size = Math.max(6, Math.round(el.size * s * 2) / 2);
+      });
+    });
     B.store.commit();
     B.emit('deck');
+    requestAnimationFrame(() => E().fit());
+    B.ui.toast(dim.name);
   };
 
   /* ---------- transitions ---------- */
@@ -508,6 +534,7 @@
     { id: 'zoom', name: 'Zoom', icon: 'zoom_in_map' },
     { id: 'flip', name: 'Flip', icon: 'flip' },
     { id: 'cube', name: 'Cube', icon: 'view_in_ar', dirs: true },
+    { id: 'page', name: 'Page Turn', icon: 'auto_stories' },
   ];
   AC.setTransition = (type) => {
     SL.selectedIds().forEach((id) => {

@@ -81,6 +81,22 @@ try {
   const kinds = await ev(() => BSD.app.deck.slides.flatMap((s) => s.elements.map((e) => e.type)));
   check('PowerPoint export → import keeps slides, charts and tables', (await ev(() => BSD.app.deck.slides.length)) === 6 && kinds.includes('chart') && kinds.includes('shape'));
 
+  // book format: portrait pages that turn sideways
+  await ev(() => BSD.io.newDeck(null, true, 'book'));
+  await page.waitForTimeout(300);
+  check('creates an 8.5 × 11 book', (await ev(() => [BSD.app.deck.w, BSD.app.deck.h].join('x'))) === '816x1056');
+  await ev(() => BSD.show.start(1));
+  await page.waitForTimeout(400);
+  await page.keyboard.press('ArrowRight'); // page 2 has one click animation
+  await page.waitForTimeout(700);
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(150);
+  const xs = await ev(() => Array.from(document.querySelectorAll('#show .show-layer')).map((l) => new DOMMatrix(getComputedStyle(l).transform).m41));
+  check('book pages slide sideways', xs.length === 2 && xs[0] < 0 && xs[1] > 0, xs.join(', '));
+  await page.waitForTimeout(700);
+  check('book footer shows progress', /Page 3 of 5/.test(await page.textContent('#show .book-footer')));
+  await page.keyboard.press('Escape');
+
   // autosave survives a reload
   await page.waitForTimeout(1500);
   const id = await ev(() => BSD.app.deck.id);

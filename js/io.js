@@ -70,9 +70,10 @@
     await U.idb.del('meta', id);
   };
 
-  IO.newDeck = async (themeId, sample) => {
+  IO.newDeck = async (themeId, sample, size) => {
     if (A.dirty) await IO.saveNow(true);
-    const d = sample ? M.sampleDeck() : M.newDeck(themeId);
+    const book = size === 'book';
+    const d = sample ? (book ? M.sampleBook() : M.sampleDeck()) : M.newDeck(themeId, book ? 'Untitled Book' : undefined, size);
     B.store.load(d, {});
     IO.saveNow(true);
   };
@@ -449,9 +450,8 @@
       else if (!bg && theme.bg === theme.bgColor) slide.background = { color: hex(theme.bgColor) };
       else slide.background = { data: IO.paintBackground(s, theme, W, H) };
 
-      if (!s.hideDecor) {
-        const decor = (s.layout === 'title' || s.layout === 'section') && theme.titleDecor ? theme.titleDecor : theme.decor;
-        for (const d of decor || []) slide.addShape('rect', { x: d.x * W * PX, y: d.y * H * PX, w: d.w * W * PX, h: d.h * H * PX, fill: { color: col(d.color) }, line: { type: 'none' } });
+      {
+        for (const d of B.decorFor(s, theme, deck)) slide.addShape('rect', { x: d.x * W * PX, y: d.y * H * PX, w: d.w * W * PX, h: d.h * H * PX, fill: { color: col(d.color) }, line: { type: 'none' } });
       }
 
       for (const el of s.elements) {
@@ -656,9 +656,12 @@
     if (!pres) throw new Error('This file is not a PowerPoint presentation.');
     const sz = all(pres, 'p', 'sldSz')[0];
     const cx = +attr(sz, 'cx') || 9144000, cy = +attr(sz, 'cy') || 5143500;
-    const k = 960 / cx; // EMU → our px
-    const fontK = 9144000 / cx; // keep text proportional to the slide
-    const deckH = Math.round(cy * k) > 600 ? 720 : 540;
+    // portrait files open as book decks (8.5 in wide), landscape ones as 10 in wide slides
+    const portrait = cy > cx;
+    const deckW = portrait ? 816 : 960;
+    const k = deckW / cx; // EMU → our px
+    const fontK = ((deckW / 96) * 914400) / cx; // keep text proportional to the page
+    const deckH = portrait ? Math.round(cy * k) : Math.round(cy * k) > 600 ? 720 : 540;
     const ky = deckH / (cy * k);
     const presRels = await rels('ppt/presentation.xml');
 
@@ -925,6 +928,7 @@
 
     const slideList = all(pres, 'p', 'sldId').map((n) => presRels[n.getAttributeNS(NS.r, 'id') || attr(n, 'r:id')]).filter(Boolean);
     const deck = M.newDeck('office', file.name.replace(/\.pptx$/i, ''));
+    deck.w = deckW;
     deck.h = deckH;
     deck.slides = [];
     const docTitle = await xml('docProps/core.xml');

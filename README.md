@@ -30,13 +30,19 @@ Presentations save automatically in the browser you're using. To move work to an
 - **Equations**: a LaTeX editor with a live preview, a template palette and common formulas (quadratic formula, Newton's laws, photosynthesis and more).
 - Symbol picker (Greek, math, arrows, science, super/subscript), WordArt, and YouTube or local video.
 - STEM diagrams: process, cycle, Venn, timeline, hierarchy, atom model and coordinate axes.
-- Ten themes with matching colors and fonts, custom slide backgrounds (solid, gradient, picture), 16:9 or 4:3 slide size, slide numbers and footers.
+- Ten themes with matching colors and fonts, custom slide backgrounds (solid, gradient, picture), 16:9, 4:3 or 8.5 × 11 book pages, slide numbers and footers.
 
 **Presenting**
-- 10 slide transitions and 16 entrance, emphasis and exit animations. You can set start (On Click, With Previous, After Previous), duration, delay and direction, and reorder them in an Animation Pane with preview.
+- 11 slide transitions and 16 entrance, emphasis and exit animations. You can set start (On Click, With Previous, After Previous), duration, delay and direction, and reorder them in an Animation Pane with preview.
 - Full-screen slide show with pen, highlighter, eraser and laser pointer. Other controls: black/white screen, go-to-slide by number, a slide overview (G), auto-advance timings and looping.
 - **Presenter View** shows a timer, a clock, the next slide or animation and your notes. It can open a second **Audience Window** for the projector that stays in sync.
 - Reading View for presenting inside a window.
+
+**Book format (8.5 × 11)**
+- Choose **Book** under File ▸ New, or switch any deck with Design ▸ Slide Size. Pages are US Letter portrait (8.5 × 11 in) with their own page layouts. Editing works exactly like slides.
+- When presenting, pages turn sideways like an e-reader. Next pages arrive from the right, and going back brings the page in from the left. Drag or swipe and the page follows your finger with the next page sliding in beside it. You can also tap the right side to go forward or the left side to go back. A footer shows the page number and how far through the book you are.
+- Transitions, animations, presenter view, the audience window, pen and laser all work as they do on slides. A slide's own transition plays when moving forward without a swipe. Books print and export to PDF or PowerPoint as letter-size pages.
+- The new **Page Turn** transition (a page turning over its left edge) works in any deck.
 
 **Files**
 - Open and save PowerPoint `.pptx` files. Text, shapes, pictures, tables, charts, notes, backgrounds, transitions and links carry over. Equations are exported as editable linear text, because PowerPoint can't read LaTeX.

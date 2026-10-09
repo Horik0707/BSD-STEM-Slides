@@ -145,12 +145,35 @@
         an(newL, [{ transform: `translate${tr}(${s * 100}%) rotate${ax}(${sg * 90}deg)` }, { transform: `translate${tr}(0) rotate${ax}(0deg)` }]);
         break;
       }
+      case 'kindle': {
+        // e-reader page turn: pages slide sideways, continuing from wherever a swipe let go
+        const w = box.clientWidth || 1;
+        const off = t.offset || 0;
+        const d = t.dir === 'prev' ? 1 : -1;
+        const ms = reduced() ? 1 : Math.max(140, 420 * (1 - Math.min(1, Math.abs(off) / w)));
+        const o = { duration: ms, easing: 'cubic-bezier(.22,.8,.3,1)' };
+        newL.classList.add('page-edge');
+        an(oldL, [{ transform: `translateX(${off}px)` }, { transform: `translateX(${d * w}px)` }], o);
+        an(newL, [{ transform: `translateX(${off - d * w}px)` }, { transform: 'translateX(0px)' }], o);
+        break;
+      }
+      case 'page': {
+        // a paper page turning over its left edge to reveal the next one
+        box.classList.add('persp');
+        oldL.style.zIndex = 2;
+        oldL.style.transformOrigin = '0% 50%';
+        an(oldL, [{ transform: 'rotateY(0deg)', filter: 'brightness(1)' }, { transform: 'rotateY(-95deg)', filter: 'brightness(.55)' }], { easing: 'cubic-bezier(.45,.05,.55,.95)' });
+        an(newL, [{ filter: 'brightness(.6)' }, { filter: 'brightness(1)' }], { easing: 'ease-out' });
+        break;
+      }
       default: break;
     }
     return Promise.all(anims.map((a) => a.finished.catch(() => null))).then(() => {
       anims.forEach((a) => a.cancel());
       if (oldL && oldL.parentNode) oldL.remove();
       newL.style.transformOrigin = '';
+      newL.style.transform = '';
+      newL.classList.remove('page-edge');
       box.classList.remove('persp');
     });
   };
@@ -176,7 +199,7 @@
     const root = U.$('#show');
     root.innerHTML = '';
     root.hidden = false;
-    root.className = opts.presenter ? 'presenter' : opts.reading ? 'reading' : opts.audience ? 'audience' : 'fullshow';
+    root.className = (opts.presenter ? 'presenter' : opts.reading ? 'reading' : opts.audience ? 'audience' : 'fullshow') + (B.isBook(deck) ? ' book' : '');
     st = {
       deck, index: -1, step: 0, steps: [], layer: null, running: [], ink: {}, tool: 'pointer', pen: { color: '#E03131', width: 3, alpha: 1 },
       presenter: !!opts.presenter, reading: !!opts.reading, audienceMode: !!opts.audience, black: null, ended: false,
@@ -211,6 +234,15 @@
     stage.addEventListener('contextmenu', onContext);
     stage.addEventListener('wheel', onWheel, { passive: false });
     stage.addEventListener('pointermove', onMove);
+    if (B.isBook(st.deck)) {
+      // e-reader style footer: page count, percent read and a progress line
+      const pg = h('span', { class: 'bf-page' });
+      const pct = h('span', { class: 'bf-pct' });
+      const bar = h('i', {});
+      stage.appendChild(h('div', { class: 'book-footer' }, pg, h('span', { class: 'bf-track' }, bar), pct));
+      Object.assign(st.dom, { bfPage: pg, bfPct: pct, bfBar: bar });
+    }
+    initSwipe(stage);
     initInk();
     const toolbar = buildToolbar();
     if (st.presenter) {
@@ -320,7 +352,7 @@
     return [
       { label: 'Next', icon: 'arrow_forward', action: next },
       { label: 'Previous', icon: 'arrow_back', action: prev },
-      { label: 'Go to Slide', icon: 'list', sub: st.deck.slides.map((s, i) => ({ label: `${i + 1}. ${slideTitle(s) || 'Slide ' + (i + 1)}${s.hidden ? ' (hidden)' : ''}`, checked: i === st.index, action: () => go(i, { transition: true }) })) },
+      { label: B.isBook(st.deck) ? 'Go to Page' : 'Go to Slide', icon: 'list', sub: st.deck.slides.map((s, i) => ({ label: `${i + 1}. ${slideTitle(s) || (B.isBook(st.deck) ? 'Page ' : 'Slide ') + (i + 1)}${s.hidden ? ' (hidden)' : ''}`, checked: i === st.index, action: () => go(i, { transition: true }) })) },
       { label: 'See All Slides', icon: 'apps', shortcut: 'G', action: overview },
       { sep: true },
       { label: 'Black Screen', icon: 'brightness_1', shortcut: 'B', action: () => curtain('black') },
@@ -341,7 +373,8 @@
     const { stage, box, ink } = st.dom;
     const W = st.deck.w, H = st.deck.h;
     const r = stage.getBoundingClientRect();
-    const k = Math.max(0.05, Math.min(r.width / W, r.height / H));
+    const reserve = B.isBook(st.deck) ? 44 : 0; // room for the page footer
+    const k = Math.max(0.05, Math.min(r.width / W, (r.height - reserve) / H));
     st.k = k;
     box.style.width = W * k + 'px';
     box.style.height = H * k + 'px';
@@ -394,7 +427,14 @@
     applyState(layer, st.steps, st.step);
     const old = st.layer;
     st.layer = layer;
-    const t = slide.transition || { type: 'none' };
+    let t = slide.transition || { type: 'none' };
+    const back = o.back != null ? o.back : prevIndex > i;
+    if (B.isBook(st.deck) && prevIndex !== i) {
+      // books always turn sideways: forward pages arrive from the right, going back from the left.
+      // A slide's own transition still plays when moving forward without a swipe.
+      if (back || st.pendingOffset != null || !t.type || t.type === 'none') t = { type: 'kindle', dir: back ? 'prev' : 'next', offset: st.pendingOffset || 0 };
+    }
+    st.pendingOffset = null;
     redrawInk();
     updateChrome();
     sync();
@@ -463,6 +503,7 @@
       st.dom.end.hidden = true;
       return go(st.index, { transition: false, step: 'end' });
     }
+    if (st.transitioning) return;
     finishRunning();
     if (st.step > 0) {
       st.step--;
@@ -472,7 +513,7 @@
       return;
     }
     const j = prevVisible(st.index);
-    if (j >= 0) go(j, { transition: false, step: 'end' });
+    if (j >= 0) go(j, { transition: B.isBook(st.deck), back: true, step: 'end' });
   }
   S.next = next;
   S.prev = prev;
@@ -521,7 +562,14 @@
   function updateChrome() {
     if (!st) return;
     const n = N();
-    if (st.dom.count) st.dom.count.textContent = st.ended ? 'End' : `Slide ${st.index + 1} of ${n}`;
+    const unit = B.isBook(st.deck) ? 'Page' : 'Slide';
+    if (st.dom.count) st.dom.count.textContent = st.ended ? 'End' : `${unit} ${st.index + 1} of ${n}`;
+    if (st.dom.bfPage) {
+      const pct = st.ended ? 100 : Math.round(((st.index + 1) / n) * 100);
+      st.dom.bfPage.textContent = st.ended ? 'The end' : `Page ${st.index + 1} of ${n}`;
+      st.dom.bfPct.textContent = pct + '%';
+      st.dom.bfBar.style.width = pct + '%';
+    }
     if (st.presenter) {
       const s = st.deck.slides[st.index];
       st.dom.notes.textContent = s && s.notes ? s.notes : 'No notes for this slide.';
@@ -615,7 +663,99 @@
       return;
     }
     if (e.target.closest('iframe, video')) return;
+    if (st.suppressClick) return;
+    if (B.isBook(st.deck)) {
+      // like an e-reader: tap the left side to go back, anywhere else to go forward
+      const r = st.dom.stage.getBoundingClientRect();
+      if (e.clientX < r.left + r.width * 0.3) return prev();
+    }
     next();
+  }
+
+  /* ---------------- swipe / drag to turn ---------------- */
+  function initSwipe(stage) {
+    let s = null;
+    let peek = null; // the neighbouring page that slides in next to the one being dragged
+    const canTurn = (dir) => (dir > 0 ? !(st.step < st.steps.length) && (nextVisible(st.index) < N() || st.deck.loop) : st.step === 0 && prevVisible(st.index) >= 0);
+    const target = (dir) => {
+      if (dir < 0) return prevVisible(st.index);
+      const j = nextVisible(st.index);
+      return j < N() ? j : nextVisible(-1);
+    };
+    const dropPeek = () => {
+      if (peek) peek.layer.remove();
+      peek = null;
+    };
+    const showPeek = (dir, dx) => {
+      if (!peek || peek.dir !== dir) {
+        dropPeek();
+        const i = target(dir);
+        if (i < 0 || i >= N()) return;
+        const layer = makeLayer(st.deck, i, st.k);
+        const steps = buildSteps(st.deck.slides[i]);
+        applyState(layer, steps, dir > 0 ? 0 : steps.length);
+        layer.classList.add('page-edge');
+        st.dom.box.insertBefore(layer, st.dom.ink);
+        peek = { dir, layer };
+      }
+      const w = st.dom.box.clientWidth;
+      peek.layer.style.transform = `translateX(${dx + (dir > 0 ? w : -w)}px)`;
+    };
+    stage.addEventListener('pointerdown', (e) => {
+      if (!st || e.button !== 0 || st.transitioning || st.overview) return;
+      if (st.tool !== 'pointer' && st.tool !== 'laser') return;
+      if (e.target.closest('.show-toolbar, .show-overview, .aud-fs, iframe, video, a, .has-link')) return;
+      const book = B.isBook(st.deck);
+      if (!book && e.pointerType !== 'touch') return; // slides: swipe on touch screens only
+      s = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId, dx: 0, dragging: false, book };
+    });
+    stage.addEventListener('pointermove', (e) => {
+      if (!s || e.pointerId !== s.id || !st) return;
+      const dx = e.clientX - s.x;
+      if (!s.dragging) {
+        if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(e.clientY - s.y)) return;
+        s.dragging = true;
+        try {
+          stage.setPointerCapture(e.pointerId);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+      s.dx = dx;
+      if (s.book && st.layer) {
+        // the page follows the finger; resist where there's nothing to turn to
+        const dir = dx < 0 ? 1 : -1;
+        const free = canTurn(dir);
+        st.layer.style.transform = `translateX(${free ? dx : dx * 0.25}px)`;
+        if (free) showPeek(dir, dx);
+        else dropPeek();
+      }
+    });
+    const end = (e) => {
+      if (!s || e.pointerId !== s.id || !st) return;
+      const cur = s;
+      s = null;
+      if (!cur.dragging) return;
+      st.suppressClick = true;
+      setTimeout(() => st && (st.suppressClick = false), 60);
+      const w = st.dom.box.clientWidth || 1;
+      const speed = Math.abs(cur.dx) / Math.max(1, Date.now() - cur.t);
+      const commit = Math.abs(cur.dx) > w * 0.18 || (speed > 0.45 && Math.abs(cur.dx) > 30);
+      const dir = cur.dx < 0 ? 1 : -1;
+      const layer = st.layer;
+      dropPeek(); // a committed turn builds the same page in the same spot, so this is seamless
+      if (commit && cur.book && canTurn(dir) && !st.audienceMode) st.pendingOffset = parseFloat((layer.style.transform.match(/-?[\d.]+/) || [0])[0]);
+      if (commit) dir > 0 ? next() : prev();
+      if (st && st.pendingOffset != null) st.pendingOffset = null;
+      if (cur.book && layer && st && st.layer === layer && layer.style.transform) {
+        // no page turn happened (e.g. an animation step played): spring back
+        const from = layer.style.transform;
+        layer.style.transform = '';
+        layer.animate([{ transform: from }, { transform: 'translateX(0px)' }], { duration: 220, easing: 'cubic-bezier(.2,.8,.3,1)' });
+      }
+    };
+    stage.addEventListener('pointerup', end);
+    stage.addEventListener('pointercancel', end);
   }
   function onContext(e) {
     if (!st) return;

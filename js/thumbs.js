@@ -7,7 +7,9 @@
   let list, sorter;
   let dropIndicator;
   let W = 168;
-  const fitWidth = () => Math.max(96, Math.min(168, list.clientWidth - 46));
+  // book (portrait) pages get narrower thumbnails so a few still fit on screen
+  const fitWidth = () => Math.round(Math.max(96, Math.min(168, list.clientWidth - 46)) * (B.isBook(A.deck) ? 0.72 : 1));
+  const sorterSize = () => Math.round(U.storage.get('sorterSize', 240) * (B.isBook(A.deck) ? 0.72 : 1));
 
   T.init = () => {
     list = U.$('#thumbList');
@@ -92,7 +94,7 @@
 
   T.renderAll = () => {
     if (!A.deck) return;
-    if (list.clientWidth) W = fitWidth();
+    if (list.clientWidth || A.deck) W = fitWidth();
     list.innerHTML = '';
     A.deck.slides.forEach((s, i) => list.appendChild(item(s, i, W)));
     T.highlight();
@@ -101,7 +103,7 @@
 
   T.renderSorter = () => {
     sorter.innerHTML = '';
-    const size = U.storage.get('sorterSize', 240);
+    const size = sorterSize();
     A.deck.slides.forEach((s, i) => sorter.appendChild(item(s, i, size)));
     T.highlight();
   };
@@ -112,7 +114,7 @@
     for (const container of A.view === 'sorter' ? [list, sorter] : [list]) {
       const old = container.querySelector(`.thumb[data-id="${CSS.escape(s.id)}"]`);
       if (!old) continue;
-      const fresh = item(s, A.current, container === sorter ? U.storage.get('sorterSize', 240) : W);
+      const fresh = item(s, A.current, container === sorter ? sorterSize() : W);
       old.replaceWith(fresh);
     }
     T.highlight(false);
@@ -138,7 +140,7 @@
   function onKey(e) {
     if (e.target.closest('input,textarea')) return;
     const grid = A.view === 'sorter' && e.currentTarget === sorter;
-    const perRow = grid ? Math.max(1, Math.floor(sorter.clientWidth / (U.storage.get('sorterSize', 240) + 24))) : 1;
+    const perRow = grid ? Math.max(1, Math.floor(sorter.clientWidth / (sorterSize() + 24))) : 1;
     const go = (d) => {
       e.preventDefault();
       if (U.mod(e)) return B.slides.moveBy(d > 0 ? 1 : -1);
@@ -313,8 +315,9 @@
     if (!A.deck) return;
     const n = A.deck.slides.length;
     const s = B.curSlide();
-    U.$('#sbSlide').textContent = A.view === 'sorter' && B.slides.selectedIds().length > 1 ? `${B.slides.selectedIds().length} slides selected` : `Slide ${A.current + 1} of ${n}${s && s.hidden ? ' (hidden)' : ''}`;
-    U.$('#sbTheme').textContent = B.theme().name;
+    const unit = B.isBook(A.deck) ? 'Page' : 'Slide';
+    U.$('#sbSlide').textContent = A.view === 'sorter' && B.slides.selectedIds().length > 1 ? `${B.slides.selectedIds().length} ${unit.toLowerCase()}s selected` : `${unit} ${A.current + 1} of ${n}${s && s.hidden ? ' (hidden)' : ''}`;
+    U.$('#sbTheme').textContent = (B.isBook(A.deck) ? 'Book 8.5 × 11 · ' : '') + B.theme().name;
     const issues = B.dialogs.a11yIssues().length;
     const a = U.$('#sbA11y');
     a.innerHTML = U.icon(issues ? 'accessibility_new' : 'accessible') + `<span>Accessibility: ${issues ? 'Investigate' : 'Good to go'}</span>`;

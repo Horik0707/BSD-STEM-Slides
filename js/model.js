@@ -66,9 +66,10 @@
     hidden: false,
   });
 
-  M.newDeck = (themeId = 'office', title = 'Untitled Presentation') => {
+  M.newDeck = (themeId = 'office', title = 'Untitled Presentation', size = '16:9') => {
+    const dim = B.PAGE_SIZES[size] || B.PAGE_SIZES['16:9'];
     const deck = {
-      id: U.uid(), version: 1, title, theme: themeId, w: 960, h: 540, slides: [],
+      id: U.uid(), version: 1, title, theme: themeId, w: dim.w, h: dim.h, slides: [],
       slideNumbers: false, footer: '', hideFooterOnTitle: true, loop: false, created: Date.now(), updated: Date.now(),
     };
     deck.slides.push(M.newSlide('title', deck));
@@ -247,6 +248,56 @@
     s6.transition = { type: 'fade', duration: 1 };
 
     d.slides.push(s2, s3, s4, s5, s6);
+    d.slideNumbers = true;
+    return d;
+  };
+
+  /** A short book-format (8.5 × 11) sample that shows off sideways page turns. */
+  M.sampleBook = () => {
+    const d = M.newDeck('galaxy', 'Field Guide to the Solar System', 'book');
+    const E = M.newElement;
+    const page = (layout) => M.newSlide(layout, d);
+    const p1 = d.slides[0];
+    p1.elements[0].html = '<div>Field Guide to the Solar System</div>';
+    p1.elements[1].html = '<div>A BSD STEM reader</div>';
+    p1.elements.push(E('shape', { shape: 'ellipse', x: 348, y: 150, w: 120, h: 120, fill: '@accent2', stroke: 'none', shadow: true, anim: { effect: 'zoom', start: 'after', duration: 0.8, delay: 0.2 } }));
+    p1.notes = 'Book pages turn sideways like an e-reader. Swipe, use the arrow keys, or tap the right side of the page.';
+
+    const p2 = page('title-content');
+    p2.elements[0].html = '<div>Chapter 1 · Our Sun</div>';
+    p2.elements[1].html =
+      '<div>The Sun is a star — a giant ball of hot plasma held together by its own gravity. It holds about 99.8% of all the mass in the solar system.</div><div><br></div><div>Deep in its core, hydrogen nuclei fuse into helium. Each second the Sun turns about 4 million tonnes of matter into energy, following Einstein\'s famous equation.</div><div><br></div><div>Light from its surface takes about <b>8 minutes and 20 seconds</b> to reach Earth.</div>';
+    p2.elements.push(E('equation', { x: 258, y: 760, w: 300, h: 90, latex: 'E = mc^2', size: 40, anim: { effect: 'fade', start: 'click', duration: 0.6, delay: 0 } }));
+
+    const p3 = page('title-only');
+    p3.elements[0].html = '<div>How far away are the planets?</div>';
+    p3.elements.push(
+      E('chart', {
+        x: 72, y: 210, w: 672, h: 640,
+        chart: {
+          kind: 'bar', title: 'Average distance from the Sun (AU)', legend: false, dataLabels: true,
+          labels: ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'],
+          series: [{ name: 'Distance (AU)', values: [0.39, 0.72, 1, 1.52, 5.2, 9.58, 19.2, 30.05] }],
+        },
+        anim: { effect: 'wipe', dir: 'left', start: 'click', duration: 0.8, delay: 0 },
+      }),
+      E('text', { x: 72, y: 880, w: 672, size: 16, html: '<div>1 AU (astronomical unit) is the average distance from Earth to the Sun: about 150 million km.</div>' })
+    );
+
+    const p4 = page('title-only');
+    p4.elements[0].html = "<div>Kepler's Third Law</div>";
+    p4.elements.push(
+      E('equation', { x: 208, y: 230, w: 400, h: 110, latex: 'T^2 \\propto a^3', size: 48 }),
+      E('text', { x: 72, y: 380, w: 672, size: 18, html: '<div>The square of a planet\'s orbital period <i>T</i> is proportional to the cube of its average distance <i>a</i> from the Sun.</div>', anim: { effect: 'float', start: 'click', duration: 0.6, delay: 0 } }),
+      E('shape', { shape: 'ellipse', x: 158, y: 560, w: 500, h: 260, fill: 'none', stroke: '@accent1', strokeWidth: 2, dash: 'dash' }),
+      E('shape', { shape: 'ellipse', x: 383, y: 665, w: 50, h: 50, fill: '@accent2', stroke: 'none' }),
+      E('shape', { shape: 'ellipse', x: 640, y: 676, w: 28, h: 28, fill: '@accent3', stroke: 'none', anim: { effect: 'spin', start: 'click', duration: 1.2, delay: 0 } })
+    );
+
+    const p5 = page('section');
+    p5.elements[0].html = '<div>Keep exploring</div>';
+    p5.elements[1].html = '<div>Make your own book with File ▸ New ▸ Book.</div>';
+    d.slides.push(p2, p3, p4, p5);
     d.slideNumbers = true;
     return d;
   };

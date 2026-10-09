@@ -519,8 +519,11 @@
         bigBtn({
           icon: 'aspect_ratio', label: 'Slide Size',
           menu: () => [
-            { label: 'Widescreen (16:9)', checked: A.deck.h === 540, action: () => AC().setSlideSize('16:9') },
-            { label: 'Standard (4:3)', checked: A.deck.h === 720, action: () => AC().setSlideSize('4:3') },
+            { label: 'Widescreen (16:9)', icon: 'crop_16_9', checked: B.sizeKey(A.deck) === '16:9', action: () => AC().setSlideSize('16:9') },
+            { label: 'Standard (4:3)', icon: 'crop_landscape', checked: B.sizeKey(A.deck) === '4:3', action: () => AC().setSlideSize('4:3') },
+            { label: 'Book · Letter (8.5 × 11 in)', icon: 'menu_book', checked: B.isBook(A.deck), action: () => AC().setSlideSize('book') },
+            { sep: true },
+            { label: 'Book pages turn sideways in the slide show', disabled: true },
           ],
         }),
         bigBtn({ icon: 'format_paint', label: 'Format Background', action: () => B.ui.toggleSidePane('background'), active: () => A.sidePane === 'background' }),
@@ -857,7 +860,7 @@
   }
   const themeCache = {};
   function themeThumb(t) {
-    const key = t.id + A.deck.h;
+    const key = t.id + A.deck.w + 'x' + A.deck.h;
     if (!themeCache[key]) {
       const d = { theme: t.id, w: A.deck.w, h: A.deck.h, slides: [] };
       const s = { layout: 'title', elements: B.layoutElements('title', d.w, d.h).map((p) => M.newElement('text', p)) };
@@ -865,7 +868,7 @@
       s.elements[0].size = 96;
       s.elements[1].html = '';
       d.slides.push(s);
-      themeCache[key] = B.render.thumb(s, 104, { deck: d, index: 0 });
+      themeCache[key] = B.render.thumb(s, B.isBook(d) ? 50 : 104, { deck: d, index: 0 });
     }
     const box = h('span', { class: 'theme-thumb' });
     box.appendChild(themeCache[key].cloneNode(true));
@@ -975,6 +978,12 @@
     });
   }, 60);
   RB.active = () => activeTab;
+  let lastShape = '';
+  B.on('deck', () => {
+    const shape = A.deck ? A.deck.w + 'x' + A.deck.h : '';
+    if (lastShape && shape !== lastShape && U.$('#ribbon-body').children.length) RB.show(activeTab);
+    lastShape = shape;
+  });
   B.on('inserted', (el) => {
     const tab = { shape: 'shape', image: 'picture', table: 'table', chart: 'chart' }[el.type];
     if (!tab) return;

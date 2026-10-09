@@ -29,7 +29,7 @@
       id: 'bsd', name: 'BSD STEM', bg: '#0F2747', bgColor: '#0F2747', heading: 'Segoe UI', body: 'Segoe UI',
       title: '#FFFFFF', text: '#DCE6F2', accents: ['#22B8CF', '#F59F00', '#69DB7C', '#FF6B6B', '#9775FA', '#74C0FC'],
       decor: [{ x: 0, y: 0.975, w: 1, h: 0.025, color: '@accent1' }, { x: 0, y: 0, w: 0.012, h: 1, color: '@accent2' }],
-      titleDecor: [{ x: 0, y: 0.92, w: 1, h: 0.08, color: '@accent1' }, { x: 0.4, y: 0.535, w: 0.2, h: 0.008, color: '@accent2' }],
+      titleDecor: [{ x: 0, y: 0.92, w: 1, h: 0.08, color: '@accent1' }, { x: 0.4, y: 0.535, w: 0.2, h: 0.008, color: '@accent2', orient: 'landscape' }, { x: 0.35, y: 0.51, w: 0.3, h: 0.005, color: '@accent2', orient: 'portrait' }],
     }),
     T({
       id: 'blueprint', name: 'Blueprint', bgColor: '#1C4E8A', heading: 'Trebuchet MS', body: 'Trebuchet MS',
@@ -55,7 +55,7 @@
       bg: 'radial-gradient(circle at 85% 15%, rgba(57,255,136,.12), transparent 40%), radial-gradient(circle at 10% 90%, rgba(0,200,255,.10), transparent 45%), #0B0F14',
       title: '#7CFFB2', text: '#C9D6DF', accents: ['#39FF88', '#00C8FF', '#FFD60A', '#FF4D6D', '#B388FF', '#FF9F1C'],
       decor: [{ x: 0.05, y: 0.2, w: 0.9, h: 0.003, color: '@accent1' }],
-      titleDecor: [{ x: 0.3, y: 0.63, w: 0.4, h: 0.004, color: '@accent1' }],
+      titleDecor: [{ x: 0.3, y: 0.63, w: 0.4, h: 0.004, color: '@accent1', orient: 'landscape' }, { x: 0.3, y: 0.515, w: 0.4, h: 0.003, color: '@accent1', orient: 'portrait' }],
     }),
     T({
       id: 'sunrise', name: 'Sunrise', bgColor: '#FF8E6B', heading: 'Century Gothic', body: 'Segoe UI',
@@ -71,7 +71,7 @@
       id: 'slate', name: 'Slate', bg: '#F3F4F6', bgColor: '#F3F4F6', heading: 'Arial', body: 'Arial',
       title: '#111827', text: '#374151', accents: ['#2563EB', '#DB2777', '#059669', '#D97706', '#7C3AED', '#0891B2'],
       decor: [{ x: 0, y: 0, w: 1, h: 0.018, color: '@accent1' }],
-      titleDecor: [{ x: 0, y: 0, w: 0.33, h: 1, color: '@accent1' }],
+      titleDecor: [{ x: 0, y: 0, w: 0.33, h: 1, color: '@accent1', orient: 'landscape' }, { x: 0, y: 0, w: 1, h: 0.24, color: '@accent1', orient: 'portrait' }],
     }),
     T({
       id: 'galaxy', name: 'Galaxy', bgColor: '#1A1033', heading: 'Century Gothic', body: 'Segoe UI',
@@ -80,6 +80,25 @@
     }),
   ];
   B.themeById = (id) => B.THEMES.find((t) => t.id === id) || B.THEMES[0];
+
+  /* ---------- page sizes ---------- */
+  // 96 px = 1 inch, so font sizes in points print at their true size on every format.
+  B.PAGE_SIZES = {
+    '16:9': { w: 960, h: 540, name: 'Widescreen (16:9)' },
+    '4:3': { w: 960, h: 720, name: 'Standard (4:3)' },
+    book: { w: 816, h: 1056, name: 'Book · Letter (8.5 × 11 in)' },
+  };
+  /** Book decks are portrait pages that turn sideways like an e-reader when presented. */
+  B.isBook = (deck) => !!deck && deck.h > deck.w;
+  B.sizeKey = (deck) => (B.isBook(deck) ? 'book' : deck.h === 720 ? '4:3' : '16:9');
+
+  /** Theme background graphics for a slide, respecting portrait/landscape-only pieces. */
+  B.decorFor = (slide, theme, deck) => {
+    if (slide.hideDecor) return [];
+    const list = (slide.layout === 'title' || slide.layout === 'section') && theme.titleDecor ? theme.titleDecor : theme.decor;
+    const orient = B.isBook(deck) ? 'portrait' : 'landscape';
+    return (list || []).filter((d) => !d.orient || d.orient === orient);
+  };
 
   /**
    * Theme colour tokens like '@accent1', '@text', '@title', '@bg' resolve against the deck theme,
@@ -122,6 +141,7 @@
 
   /** Returns placeholder elements for a layout, sized for a W×H slide. */
   B.layoutElements = (layoutId, W, H) => {
+    if (H > W) return portraitLayout(layoutId, W, H);
     const ys = H / 540;
     const ph = (placeholder, x, y, w, h, extra) =>
       Object.assign(
@@ -165,6 +185,48 @@
         return [T(50, 28, 860, 90), ph('body', 50, 138, 860, 370, { size: 24 })];
     }
   };
+
+  /** Layouts for book (portrait) pages: one-inch-ish margins, content stacked top to bottom. */
+  function portraitLayout(layoutId, W, H) {
+    const m = Math.round(W * 0.088); // 0.75 in on a letter page
+    const cw = W - 2 * m;
+    const ys = H / 1056;
+    const ph = (placeholder, x, y, w, h, extra) =>
+      Object.assign(
+        { type: 'text', placeholder, x, y: Math.round(y * ys), w, h: Math.round(h * ys), autoHeight: false, html: '' },
+        placeholder === 'title' || placeholder === 'subtitle' ? {} : { html: '<ul><li><br></li></ul>' },
+        extra || {}
+      );
+    const T = (y, h, extra) => ph('title', m, y, cw, h, Object.assign({ size: 34, valign: 'bottom' }, extra));
+    switch (layoutId) {
+      case 'title':
+        return [T(320, 210, { size: 48, align: 'center' }), ph('subtitle', m + 40, 550, cw - 80, 120, { size: 22, align: 'center', valign: 'top' })];
+      case 'section':
+        return [T(400, 160, { size: 40 }), ph('subtitle', m, 575, cw, 90, { size: 20, valign: 'top' })];
+      case 'two-content':
+        return [T(60, 110), ph('body', m, 196, cw, 386, { size: 18 }), ph('body', m, 606, cw, 386, { size: 18 })];
+      case 'comparison':
+        return [
+          T(60, 110),
+          ph('subtitle', m, 190, cw, 48, { size: 22, bold: true, valign: 'bottom', hint: 'Click to add heading' }),
+          ph('body', m, 244, cw, 320, { size: 18 }),
+          ph('subtitle', m, 590, cw, 48, { size: 22, bold: true, valign: 'bottom', hint: 'Click to add heading' }),
+          ph('body', m, 644, cw, 340, { size: 18 }),
+        ];
+      case 'title-only':
+        return [T(60, 110)];
+      case 'big-number':
+        return [
+          ph('title', m, 250, cw, 300, { size: 120, align: 'center', valign: 'bottom', color: '@accent1', hint: 'Click to add a number' }),
+          ph('subtitle', m + 40, 575, cw - 80, 160, { size: 24, align: 'center', valign: 'top', hint: 'Click to add the fact' }),
+        ];
+      case 'blank':
+        return [];
+      case 'title-content':
+      default:
+        return [T(60, 110), ph('body', m, 196, cw, 796, { size: 18 })];
+    }
+  }
 
   B.placeholderHint = (el) =>
     el.hint ||
