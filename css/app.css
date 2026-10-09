@@ -779,3 +779,46 @@ body.audience-mode #app { display: none; }
 .bf-page { white-space: nowrap; }
 .bf-pct { min-width: 36px; text-align: right; }
 #show.presenter.book .book-footer { bottom: 6px; }
+
+/* ---------- audio ---------- */
+.el-audio .audio-icon { position: absolute; inset: 0; display: block; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25)); }
+.mode-show .el-audio { cursor: pointer; }
+.el-audio.audio-hidden { visibility: hidden; }
+.audio-ctl { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); display: flex; align-items: center; gap: 6px; width: max(170px, 100%); height: 26px; padding: 0 8px 0 2px; border-radius: 13px; background: rgba(20, 20, 24, 0.72); color: #fff; font: 11px/1 'Segoe UI', system-ui, sans-serif; opacity: 0; transition: opacity 0.2s; }
+.mode-show .el-audio:hover .audio-ctl, .audio-ctl.playing { opacity: 1; }
+.ac-play, .ab-play { width: 24px; height: 24px; flex: none; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; padding: 0; }
+.ac-play .ms, .ab-play .ms { font-size: 18px; }
+.ac-track, .ab-track { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.3); overflow: hidden; cursor: pointer; }
+.ac-track i, .ab-track i { display: block; height: 100%; width: 0; background: #fff; }
+.ac-time, .ab-time { min-width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+.audio-bar { position: absolute; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 3px; border-radius: 15px; background: #26282d; color: #fff; font-size: 11px; pointer-events: auto; box-shadow: var(--shadow); z-index: 2; }
+.ab-play:hover { background: rgba(255, 255, 255, 0.15); }
+.ab-track { height: 5px; }
+.rec-dialog { display: flex; flex-direction: column; gap: 12px; }
+.rec-stage { display: flex; align-items: center; gap: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.rec-btn { width: 64px; height: 64px; flex: none; border-radius: 50%; border: 3px solid #e03131; background: #fff; color: #e03131; display: grid; place-items: center; }
+.rec-btn .ms { font-size: 34px; }
+.rec-btn.on { background: #e03131; color: #fff; animation: recpulse 1.2s ease-in-out infinite; }
+@keyframes recpulse { 50% { box-shadow: 0 0 0 8px rgba(224, 49, 49, 0.2); } }
+.rec-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rec-time { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rec-meter { width: 100%; height: 48px; }
+.rec-status { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.rec-status.error { color: var(--danger); }
+.rec-preview { width: 100%; }
+.setup-show .bs-radio { max-width: none; }
+.setup-auto { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.setup-auto.off { opacity: 0.45; pointer-events: none; }
+.setup-auto .field-label.inline { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 13px; }
+.setup-list { max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.setup-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.setup-row:last-child { border-bottom: 0; }
+.setup-row.hidden-slide { opacity: 0.5; }
+.setup-num { width: 22px; color: var(--muted); text-align: right; }
+.setup-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.setup-sec { width: 80px !important; }
+.auto-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, 0.08); z-index: 3; pointer-events: none; }
+.auto-bar i { display: block; height: 100%; width: 0; background: rgba(77, 152, 255, 0.85); }
+#show.auto-paused .auto-bar i { background: #f59f00; }
+#show.book .auto-bar { bottom: 40px; left: 50%; width: min(520px, 80%); transform: translateX(-50%); right: auto; background: transparent; }
+.setup-sec::placeholder { color: var(--muted); opacity: 0.55; }

@@ -81,6 +81,27 @@ try {
   const kinds = await ev(() => BSD.app.deck.slides.flatMap((s) => s.elements.map((e) => e.type)));
   check('PowerPoint export → import keeps slides, charts and tables', (await ev(() => BSD.app.deck.slides.length)) === 6 && kinds.includes('chart') && kinds.includes('shape'));
 
+  // audio: insert a clip (a generated half-second WAV) and get the Playback tab
+  await ev(() => BSD.io.newDeck(null, true, '16:9'));
+  await page.waitForTimeout(300);
+  await ev(() => {
+    const n = 11025, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 22050, true); v.setUint32(28, 44100, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.sin(i / 8) * 8000, true);
+    const b = new Uint8Array(buf); let s = ''; b.forEach((x) => (s += String.fromCharCode(x)));
+    BSD.slides.go(1);
+    BSD.media.insertData('data:audio/wav;base64,' + btoa(s), 'Beep');
+  });
+  check('inserts an audio clip with a speaker icon and Playback tab', (await ev(() => BSD.selectedEls()[0].type)) === 'audio' && (await ev(() => BSD.ribbon.active())) === 'audio' && (await page.locator('#overlay .audio-bar').count()) === 1);
+
+  // automatic (timed) slide show advances on its own
+  await ev(() => { BSD.app.deck.showMode = 'auto'; BSD.app.deck.slideDuration = 1; BSD.show.start(0); });
+  await page.waitForTimeout(2200);
+  check('timed slide show advances by itself', /What you can do/.test(await page.textContent('#show .show-stage')));
+  await page.keyboard.press('Escape');
+
   // book format: portrait pages that turn sideways
   await ev(() => BSD.io.newDeck(null, true, 'book'));
   await page.waitForTimeout(300);

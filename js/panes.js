@@ -17,7 +17,7 @@
     const n = same.indexOf(el) + 1;
     const base =
       el.placeholder === 'title' ? 'Title' : el.placeholder === 'subtitle' ? 'Subtitle' : el.placeholder ? 'Content Placeholder'
-        : el.type === 'text' ? 'TextBox' : el.type === 'shape' ? B.shapeById(el.shape).name : el.type === 'image' ? 'Picture'
+        : el.type === 'text' ? 'TextBox' : el.type === 'shape' ? B.shapeById(el.shape).name : el.type === 'image' ? 'Picture' : el.type === 'audio' ? 'Audio'
           : el.type[0].toUpperCase() + el.type.slice(1);
     const txt = el.html ? U.htmlToText(el.html).slice(0, 28) : el.latex ? el.latex.slice(0, 24) : '';
     return { name: `${base} ${n}`, text: txt };
@@ -271,6 +271,30 @@
           field('Size (pt)', num(el.size, (v) => set('size', U.clamp(v, 6, 200)), { dec: 0 })),
           field('Color', colorField(el.color, (c) => set('color', c), { allowNone: false, allowAuto: true })),
           edit,
+        ])
+      );
+    }
+
+    if (el.type === 'audio' && els.length === 1) {
+      const chk = (label, key, dflt) => {
+        const i = h('input', { type: 'checkbox' });
+        i.checked = el[key] == null ? dflt : !!el[key];
+        i.addEventListener('change', () => set(key, i.checked, false));
+        return h('label', { class: 'pane-check' }, i, h('span', {}, label));
+      };
+      const nm = h('input', { class: 'field', value: el.name || '' });
+      nm.addEventListener('change', () => set('name', nm.value.trim() || 'Audio', false));
+      body.appendChild(
+        section('Audio', [
+          field('Name', nm),
+          field('Start', selectEl(B.media.START_OPTIONS, el.start || 'click', (v) => set('start', v, false))),
+          h('p', { class: 'help' }, 'In an automatic (timed) slide show every clip plays on its own.'),
+          field('Volume', selectEl(B.media.VOLUMES.map(([v, l]) => [String(v), l]), String(el.volume == null ? 1 : el.volume), (v) => set('volume', +v, false))),
+          chk('Play across slides', 'across', false),
+          chk('Loop until stopped', 'loop', false),
+          chk('Hide during show', 'hide', false),
+          chk('Rewind after playing', 'rewind', true),
+          field('Icon color', colorField(el.fill, (c) => set('fill', c), { allowNone: false })),
         ])
       );
     }

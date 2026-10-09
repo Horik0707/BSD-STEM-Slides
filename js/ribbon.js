@@ -501,6 +501,13 @@
       ]),
       group('Media', [
         bigBtn({
+          icon: 'volume_up', label: 'Audio',
+          menu: () => [
+            { label: 'Audio on My PC…', icon: 'upload_file', action: () => B.media.pickAndInsert() },
+            { label: 'Record Audio…', icon: 'mic', action: () => B.media.recordDialog() },
+          ],
+        }),
+        bigBtn({
           icon: 'smart_display', label: 'Video',
           menu: () => [
             { label: 'Online Video (YouTube)…', icon: 'smart_display', action: () => B.dialogs.video(null) },
@@ -590,11 +597,18 @@
         bigBtn({ icon: 'co_present', label: 'Presenter View', shortcut: 'Alt+F5', action: () => B.show.start(A.current, { presenter: true }) }),
       ]),
       group('Set Up', [
+        bigBtn({ icon: 'settings', label: 'Set Up Slide Show', action: () => B.dialogs.setupShow() }),
         bigBtn({ icon: 'visibility_off', label: 'Hide Slide', action: () => B.slides.toggleHidden(), active: () => B.curSlide().hidden }),
         col(
-          check({ label: 'Loop continuously until Esc', value: () => A.deck.loop, onChange: (v) => setDeck('loop', v) }),
-          check({ label: 'Use timings', value: () => A.deck.useTimings !== false, onChange: (v) => setDeck('useTimings', v) }),
-          check({ label: 'Show media controls', value: () => true, onChange: () => {}, enabled: () => false })
+          h('label', { class: 'rb-numfield' }, h('span', { html: U.icon('timer') }), h('span', { class: 'rb-num-label' }, 'Advance'),
+            select({ title: 'Advance slides', width: 168, options: [{ value: 'manual', label: 'Manually (on click)' }, { value: 'auto', label: 'Automatically (timed)' }], value: () => A.deck.showMode || 'manual', onChange: (v) => setDeck('showMode', v) })),
+          number({ label: 'Each slide', icon: 'hourglass_empty', suffix: 's', step: 1, min: 1, max: 3600, decimals: 1, value: () => A.deck.slideDuration || 5, onChange: (v) => setDeck('slideDuration', U.clamp(v, 1, 3600)), enabled: () => A.deck.showMode === 'auto' }),
+          check({ label: 'Loop continuously until Esc', value: () => A.deck.loop, onChange: (v) => setDeck('loop', v) })
+        ),
+        col(
+          check({ label: 'Play all audio automatically', value: () => A.deck.autoAudio !== false, onChange: (v) => setDeck('autoAudio', v), enabled: () => A.deck.showMode === 'auto' }),
+          check({ label: 'Wait for audio to finish', value: () => A.deck.waitForAudio !== false, onChange: (v) => setDeck('waitForAudio', v), enabled: () => A.deck.showMode === 'auto' }),
+          check({ label: 'Use per-slide timings', title: 'Slides with their own “After” time (Transitions tab) use it', value: () => A.deck.useTimings !== false, onChange: (v) => setDeck('useTimings', v) })
         ),
       ]),
     ],
@@ -728,6 +742,40 @@
       arrangeGroup(),
       sizeGroup(),
     ],
+
+    audio: () => {
+      const a = () => sel()[0] || {};
+      const set = (k, v) => E().setProp(k, v, (e) => e.type === 'audio');
+      return [
+        group('Preview', [bigBtn({ icon: 'play_arrow', label: 'Play', title: 'Play / Pause', action: () => B.media.togglePreview(a()), active: () => B.media.isPreviewing(a().id) })]),
+        group('Editing', [
+          col(
+            smallBtn({ icon: 'library_music', label: 'Replace Audio…', action: () => B.media.replace(a()) }),
+            smallBtn({ icon: 'mic', label: 'Record New…', action: () => B.media.recordDialog() }),
+            smallBtn({ icon: 'edit', label: 'Rename…', action: async () => { const n = await B.ui.prompt('Rename Audio', 'Name', a().name || ''); if (n) set('name', n.trim()); } })
+          ),
+        ]),
+        group('Audio Options', [
+          col(
+            h('label', { class: 'rb-numfield' }, h('span', { html: U.icon('play_circle') }), h('span', { class: 'rb-num-label' }, 'Start'),
+              select({ title: 'Start', width: 150, options: B.media.START_OPTIONS.map(([value, label]) => ({ value, label })), value: () => a().start || 'click', onChange: (v) => set('start', v) })),
+            smallBtn({
+              icon: 'volume_up', label: 'Volume',
+              menu: () => B.media.VOLUMES.map(([v, l, i]) => ({ label: l, icon: i, checked: (a().volume == null ? 1 : a().volume) === v, action: () => set('volume', v) })),
+            })
+          ),
+          col(
+            check({ label: 'Play Across Slides', value: () => a().across, onChange: (v) => set('across', v) }),
+            check({ label: 'Loop until Stopped', value: () => a().loop, onChange: (v) => set('loop', v) }),
+            check({ label: 'Hide During Show', value: () => a().hide, onChange: (v) => set('hide', v) })
+          ),
+          col(check({ label: 'Rewind after Playing', value: () => a().rewind !== false, onChange: (v) => set('rewind', v) })),
+        ]),
+        group('Icon', [colorBtn({ icon: 'format_color_fill', label: 'Icon Color', title: 'Icon Color', default: '@accent1', onPick: (c) => c !== 'none' && set('fill', c) })]),
+        arrangeGroup(),
+        sizeGroup(),
+      ];
+    },
 
     chart: () => [
       group('Data', [bigBtn({ icon: 'table_chart', label: 'Edit Data', action: () => B.dialogs.chart(sel()[0]) })]),
@@ -894,6 +942,7 @@
     if (els.length === 1 && els[0].type === 'image') t.push(['picture', 'Picture Format']);
     if (els.length === 1 && els[0].type === 'table') t.push(['table', 'Table Design']);
     if (els.length === 1 && els[0].type === 'chart') t.push(['chart', 'Chart Design']);
+    if (els.length === 1 && els[0].type === 'audio') t.push(['audio', 'Playback']);
     return t;
   };
 
@@ -978,6 +1027,7 @@
     });
   }, 60);
   RB.active = () => activeTab;
+  B.on('media', () => activeTab === 'audio' && RB.updateText());
   let lastShape = '';
   B.on('deck', () => {
     const shape = A.deck ? A.deck.w + 'x' + A.deck.h : '';
@@ -985,7 +1035,7 @@
     lastShape = shape;
   });
   B.on('inserted', (el) => {
-    const tab = { shape: 'shape', image: 'picture', table: 'table', chart: 'chart' }[el.type];
+    const tab = { shape: 'shape', image: 'picture', table: 'table', chart: 'chart', audio: 'audio' }[el.type];
     if (!tab) return;
     RB.update();
     if (contextualTabs().some((t) => t[0] === tab)) RB.show(tab);

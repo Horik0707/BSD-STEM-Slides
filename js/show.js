@@ -204,8 +204,11 @@
       deck, index: -1, step: 0, steps: [], layer: null, running: [], ink: {}, tool: 'pointer', pen: { color: '#E03131', width: 3, alpha: 1 },
       presenter: !!opts.presenter, reading: !!opts.reading, audienceMode: !!opts.audience, black: null, ended: false,
       t0: Date.now(), elapsed: 0, paused: false, typed: '', audience: null, timers: [], advanceTimer: null, wheelAt: 0, k: 1, lastShown: index,
+      // automatic (timed) shows advance by themselves; the projector window just mirrors the presenter
+      auto: deck.showMode === 'auto' && !opts.audience, autoPaused: false, autoToken: 0, slideStart: Date.now(),
     };
     buildDom(root);
+    B.media.showStart({ muted: st.audienceMode }); // the projector window stays silent; sound comes from the presenter
     document.addEventListener('keydown', onKey, true);
     window.addEventListener('resize', onResize);
     if (!st.reading && !st.audienceMode && !st.presenter) {
@@ -241,6 +244,11 @@
       const bar = h('i', {});
       stage.appendChild(h('div', { class: 'book-footer' }, pg, h('span', { class: 'bf-track' }, bar), pct));
       Object.assign(st.dom, { bfPage: pg, bfPct: pct, bfBar: bar });
+    }
+    if (st.auto) {
+      const bar = h('div', { class: 'auto-bar', title: 'Time until the next slide' }, h('i', {}));
+      stage.appendChild(bar);
+      st.dom.autoBar = bar.firstChild;
     }
     initSwipe(stage);
     initInk();
@@ -324,11 +332,14 @@
       return x;
     };
     tb.append(
+      ...[
       b('arrow_back', 'Previous', prev),
       b('arrow_forward', 'Next', next),
       b('edit', 'Pen & laser', (x) => B.ui.menu(penMenu(), 0, 0, { anchor: x })),
       b('apps', 'See all slides (G)', overview),
-      b('more_horiz', 'More', (x) => B.ui.menu(moreMenu(), 0, 0, { anchor: x }))
+      st.auto ? b('pause', 'Pause automatic show (S)', (x) => toggleAuto(x)) : null,
+      b('more_horiz', 'More', (x) => B.ui.menu(moreMenu(), 0, 0, { anchor: x })),
+      ].filter(Boolean)
     );
     if (st.presenter) tb.classList.add('always');
     st.dom = st.dom || {};
@@ -354,6 +365,7 @@
       { label: 'Previous', icon: 'arrow_back', action: prev },
       { label: B.isBook(st.deck) ? 'Go to Page' : 'Go to Slide', icon: 'list', sub: st.deck.slides.map((s, i) => ({ label: `${i + 1}. ${slideTitle(s) || (B.isBook(st.deck) ? 'Page ' : 'Slide ') + (i + 1)}${s.hidden ? ' (hidden)' : ''}`, checked: i === st.index, action: () => go(i, { transition: true }) })) },
       { label: 'See All Slides', icon: 'apps', shortcut: 'G', action: overview },
+      st.auto ? { label: st.autoPaused ? 'Resume Automatic Show' : 'Pause Automatic Show', icon: st.autoPaused ? 'play_arrow' : 'pause', shortcut: 'S', action: () => toggleAuto() } : null,
       { sep: true },
       { label: 'Black Screen', icon: 'brightness_1', shortcut: 'B', action: () => curtain('black') },
       { label: 'White Screen', icon: 'radio_button_unchecked', shortcut: 'W', action: () => curtain('white') },
@@ -409,6 +421,8 @@
   async function go(i, o = {}) {
     if (!st) return;
     clearTimeout(st.advanceTimer);
+    st.autoToken++; // stop the previous slide's timer
+    resetAutoBar();
     finishRunning();
     if (i >= N()) {
       if (st.deck.loop) i = nextVisible(-1) < N() ? nextVisible(-1) : 0;
@@ -425,6 +439,7 @@
     st.step = o.step === 'end' ? st.steps.length : o.step || 0;
     const layer = makeLayer(st.deck, i, st.k);
     applyState(layer, st.steps, st.step);
+    B.media.bindLayer(layer, slide);
     const old = st.layer;
     st.layer = layer;
     let t = slide.transition || { type: 'none' };
@@ -449,9 +464,80 @@
     }
     if (st.layer !== layer) return;
     st.dom.box.insertBefore(layer, st.dom.ink); // keep the ink canvas on top
+    st.slideStart = Date.now();
+    B.media.enterSlide(slide, { all: st.auto && st.deck.autoAudio !== false });
+    if (st.auto) return startAuto();
     if (st.step === 0 && st.steps[0] && st.steps[0].auto) await runStep();
     scheduleAdvance();
   }
+
+  /* ---------------- automatic (timed) shows ---------------- */
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const slideSeconds = (slide) => (st.deck.useTimings !== false && slide.advanceAfter != null ? slide.advanceAfter : st.deck.slideDuration || 5);
+
+  /** Play the rest of this slide's builds, hold it for its time (and its audio), then move on. */
+  async function startAuto() {
+    if (!st || !st.auto || st.autoPaused || st.ended || st.audienceMode) return;
+    const token = ++st.autoToken;
+    const idx = st.index;
+    const alive = () => st && st.autoToken === token && !st.autoPaused && st.index === idx;
+    const slide = st.deck.slides[idx];
+    while (alive() && st.step < st.steps.length) {
+      if (!(st.step === 0 && st.steps[0].auto)) await sleep(700); // a beat between automatic builds
+      if (!alive()) return;
+      await runStep();
+    }
+    if (!alive()) return;
+    const wait = Math.max(0, slideSeconds(slide) * 1000 - (Date.now() - st.slideStart));
+    runAutoBar(wait);
+    await sleep(wait);
+    if (!alive()) return;
+    if (st.deck.waitForAudio !== false) {
+      await B.media.waitForSlide(slide, alive);
+      if (!alive()) return;
+    }
+    go(nextVisible(st.index), { transition: true });
+  }
+  function runAutoBar(ms) {
+    const i = st && st.dom.autoBar;
+    if (!i) return;
+    i.style.transition = 'none';
+    i.style.width = '0%';
+    void i.offsetWidth;
+    i.style.transition = `width ${ms}ms linear`;
+    i.style.width = '100%';
+  }
+  function resetAutoBar() {
+    const i = st && st.dom.autoBar;
+    if (!i) return;
+    i.style.transition = 'none';
+    i.style.width = '0%';
+  }
+  function toggleAuto(btn) {
+    if (!st || !st.auto) return;
+    st.autoPaused = !st.autoPaused;
+    st.autoToken++;
+    resetAutoBar();
+    st.dom.root.classList.toggle('auto-paused', st.autoPaused);
+    U.$$('.st-btn[title^="Pause"], .st-btn[title^="Resume"]', st.dom.root).concat(btn ? [btn] : []).forEach((b) => {
+      b.innerHTML = U.icon(st.autoPaused ? 'play_arrow' : 'pause');
+      b.title = st.autoPaused ? 'Resume automatic show (S)' : 'Pause automatic show (S)';
+    });
+    B.ui.toast(st.autoPaused ? 'Automatic show paused — press S to resume' : 'Automatic show resumed', 1600);
+    if (!st.autoPaused) {
+      st.slideStart = Date.now();
+      startAuto();
+    }
+  }
+  /** After a manual click/key in an automatic show, keep the timer going from here. */
+  const resumeAutoAfter = (p) => {
+    if (!st || !st.auto) return;
+    Promise.resolve(p).then(() => {
+      if (!st || st.autoPaused) return;
+      st.slideStart = Date.now();
+      startAuto();
+    });
+  };
 
   function finishRunning() {
     if (!st) return false;
@@ -478,7 +564,7 @@
   }
 
   function scheduleAdvance() {
-    if (!st || st.audienceMode) return;
+    if (!st || st.audienceMode || st.auto) return;
     clearTimeout(st.advanceTimer);
     const s = st.deck.slides[st.index];
     if (!s || s.advanceAfter == null || st.deck.useTimings === false) return;
@@ -491,7 +577,14 @@
     if (st.black) return curtain(null);
     if (st.ended) return S.exit();
     if (finishRunning() || st.transitioning) return;
-    if (st.step < st.steps.length) return runStep();
+    // a click first starts any audio set to play "On Next Click"
+    if (!st.auto && B.media.playNext(st.deck.slides[st.index])) return;
+    if (st.step < st.steps.length) {
+      if (st.auto) st.autoToken++;
+      const p = runStep();
+      resumeAutoAfter(p);
+      return p;
+    }
     go(nextVisible(st.index), { transition: true });
   }
   function prev() {
@@ -510,6 +603,11 @@
       applyState(st.layer, st.steps, st.step);
       sync();
       updateChrome();
+      if (st.auto) {
+        st.autoToken++;
+        resetAutoBar();
+        resumeAutoAfter();
+      }
       return;
     }
     const j = prevVisible(st.index);
@@ -519,6 +617,8 @@
   S.prev = prev;
 
   function showEnd() {
+    st.autoToken++;
+    resetAutoBar();
     st.ended = true;
     st.dom.end.hidden = false;
     updateChrome();
@@ -645,6 +745,7 @@
     else if (key === 'w' || key === 'W' || key === ',') st.audienceMode ? sendNav('white') : curtain('white');
     else if (key === 'e' || key === 'E') clearInk();
     else if (key === 'g' || key === 'G') overview();
+    else if ((key === 's' || key === 'S') && st.auto) toggleAuto();
     else if (key === 'F5') handled = true;
     else handled = false;
     if (handled) {
@@ -664,6 +765,7 @@
     }
     if (e.target.closest('iframe, video')) return;
     if (st.suppressClick) return;
+    if (B.media.showClick(e, st.deck.slides[st.index])) return; // speaker icons play/pause instead of advancing
     if (B.isBook(st.deck)) {
       // like an e-reader: tap the left side to go back, anywhere else to go forward
       const r = st.dom.stage.getBoundingClientRect();
@@ -704,7 +806,7 @@
     stage.addEventListener('pointerdown', (e) => {
       if (!st || e.button !== 0 || st.transitioning || st.overview) return;
       if (st.tool !== 'pointer' && st.tool !== 'laser') return;
-      if (e.target.closest('.show-toolbar, .show-overview, .aud-fs, iframe, video, a, .has-link')) return;
+      if (e.target.closest('.show-toolbar, .show-overview, .aud-fs, iframe, video, a, .has-link, .el-audio')) return;
       const book = B.isBook(st.deck);
       if (!book && e.pointerType !== 'touch') return; // slides: swipe on touch screens only
       s = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId, dx: 0, dragging: false, book };
@@ -874,6 +976,8 @@
     finishRunning();
     clearTimeout(st.advanceTimer);
     clearInterval(st.clock);
+    st.autoToken++;
+    B.media.showStop();
     document.removeEventListener('keydown', onKey, true);
     window.removeEventListener('resize', onResize);
     document.removeEventListener('fullscreenchange', onFsChange);

@@ -195,6 +195,8 @@
         box.appendChild(U.h('div', { class: 'handle rot', 'data-h': 'rot', title: 'Rotate (Shift snaps to 15°)', html: U.icon('rotate_right') }));
       }
       overlay.appendChild(box);
+      // audio clips get a small player under the icon, like PowerPoint
+      if (el.type === 'audio') overlay.appendChild(B.media.editorBar(el, el.x * s + (el.w * s) / 2 - Math.max(190, el.w * s) / 2, (el.y + el.h) * s + 8, el.w * s));
       return;
     }
     for (const el of els) {
@@ -328,6 +330,7 @@
     if (el.type === 'chart') B.dialogs.chart(el);
     else if (el.type === 'equation') B.dialogs.equation(el);
     else if (el.type === 'video') B.dialogs.video(el);
+    else if (el.type === 'audio') B.media.togglePreview(el);
     else if (el.type === 'image') B.ui.openSidePane('format');
   }
 
@@ -360,6 +363,7 @@
     for (const f of files) {
       if (/^image\//.test(f.type)) await E.insertImageFile(f, p);
       else if (/^video\//.test(f.type)) await E.insertVideoFile(f, p);
+      else if (/^audio\//.test(f.type) || /\.(mp3|wav|m4a|ogg|opus|flac)$/i.test(f.name)) await B.media.insertFile(f, p);
       else if (/\.(pptx|bsdslides|json)$/i.test(f.name)) return B.io.openFile(f);
     }
   }
@@ -1273,6 +1277,7 @@
   E.deleteSelection = () => {
     const ids = new Set(A.selection);
     if (!ids.size) return;
+    if ([...ids].some((id) => B.media.isPreviewing(id))) B.media.stopPreview();
     const s = B.curSlide();
     s.elements = s.elements.filter((e) => !ids.has(e.id) || e.locked);
     A.selection = [];

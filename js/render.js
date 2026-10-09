@@ -139,6 +139,9 @@
       case 'video':
         R.video(n, el, ctx);
         break;
+      case 'audio':
+        B.media.render(n, el, ctx);
+        break;
     }
     return n;
   };

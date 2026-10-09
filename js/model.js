@@ -51,6 +51,7 @@
     }),
     equation: () => ({ latex: 'E = mc^2', size: 32, color: null }),
     video: () => ({ src: '', kind: 'youtube', fill: '#000000' }),
+    audio: () => ({ asset: null, name: 'Audio', w: 64, h: 64, fill: '@accent1', start: 'click', volume: 1, loop: false, across: false, hide: false, rewind: true }),
   };
 
   M.newElement = (type, props = {}) =>
@@ -71,6 +72,7 @@
     const deck = {
       id: U.uid(), version: 1, title, theme: themeId, w: dim.w, h: dim.h, slides: [],
       slideNumbers: false, footer: '', hideFooterOnTitle: true, loop: false, created: Date.now(), updated: Date.now(),
+      showMode: 'manual', slideDuration: 5, autoAudio: true, waitForAudio: true,
     };
     deck.slides.push(M.newSlide('title', deck));
     return deck;
@@ -83,6 +85,11 @@
     deck.h = deck.h || 540;
     deck.theme = deck.theme || 'office';
     deck.title = deck.title || 'Untitled Presentation';
+    // slide show set-up (older decks predate these)
+    if (deck.showMode !== 'auto') deck.showMode = 'manual';
+    if (!(deck.slideDuration > 0)) deck.slideDuration = 5;
+    if (deck.autoAudio == null) deck.autoAudio = true;
+    if (deck.waitForAudio == null) deck.waitForAudio = true;
     deck.slides = (deck.slides || []).map((s) => {
       s.id = s.id || U.uid();
       s.elements = (s.elements || []).map((e) => {

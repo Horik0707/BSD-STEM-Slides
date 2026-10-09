@@ -561,6 +561,13 @@
           } else if (el.type === 'equation') {
             // PowerPoint can't read LaTeX; export a picture of the formula when possible, else linear text
             slide.addText(IO.latexToText(el.latex), Object.assign({}, b, { rotate, fontFace: 'Cambria Math', fontSize: el.size || 32, color: hex(B.resolveColor(el.color, theme) || theme.text), align: el.align || 'center', valign: 'middle', italic: false }));
+          } else if (el.type === 'audio') {
+            const data = A.assets[el.asset];
+            if (!data) continue;
+            const aud = await B.media.toPptxAudio(data).catch(() => null);
+            if (!aud) continue;
+            const cover = await B.media.iconPng(B.resolveColor(el.fill, theme) || theme.accents[0]);
+            slide.addMedia(Object.assign({}, b, { type: 'audio', data: aud.data, extn: aud.extn, objectName: el.name || 'Audio' }, cover ? { cover } : {}));
           } else if (el.type === 'video') {
             const yt = el.kind === 'youtube' ? R.ytId(el.src) : null;
             if (yt) slide.addMedia(Object.assign({}, b, { type: 'online', link: 'https://www.youtube.com/embed/' + yt }));
@@ -715,7 +722,7 @@
       const f = zip.file(target);
       if (!f) return null;
       const ext = (target.split('.').pop() || '').toLowerCase();
-      const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp', svg: 'image/svg+xml', webp: 'image/webp', mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm' }[ext];
+      const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp', svg: 'image/svg+xml', webp: 'image/webp', mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', flac: 'audio/flac' }[ext];
       if (!mime) return null;
       const id = 'a_' + U.uid();
       let data = `data:${mime};base64,` + (await f.async('base64'));
@@ -1044,11 +1051,25 @@
           } else if (name === 'pic') {
             const blip = all(n, 'a', 'blip')[0];
             const r = blip && srels[blip.getAttributeNS(NS.r, 'embed')];
-            const vid = all(n, 'a', 'videoFile')[0];
-            if (vid) {
-              const vr = srels[vid.getAttributeNS(NS.r, 'link')];
-              if (vr && vr.external && B.render.ytId(vr.target)) {
-                slide.elements.push(M.newElement('video', Object.assign(base, { kind: 'youtube', src: vr.target })));
+            // media clips: <a:audioFile>/<a:videoFile> link plus a p14:media embed of the actual file
+            const mf = all(n, 'a', 'audioFile')[0] || all(n, 'a', 'videoFile')[0];
+            if (mf) {
+              const lr = srels[mf.getAttributeNS(NS.r, 'link')];
+              if (lr && lr.external && B.render.ytId(lr.target)) {
+                slide.elements.push(M.newElement('video', Object.assign(base, { kind: 'youtube', src: lr.target })));
+                continue;
+              }
+              const p14 = n.getElementsByTagNameNS('*', 'media')[0];
+              const er = (p14 && srels[p14.getAttributeNS(NS.r, 'embed')]) || (lr && !lr.external ? lr : null);
+              const isAudio = mf.localName === 'audioFile' || /\/audio$/.test((lr && lr.type) || '') || (er && /\.(mp3|wav|m4a|aac|ogg|oga|opus|flac)$/i.test(er.target));
+              const mid = er && !er.external ? await addMedia(er.target) : null;
+              if (mid && isAudio) {
+                const nm = attr(path(n, 'p:nvPicPr', 'p:cNvPr'), 'name') || 'Audio';
+                slide.elements.push(M.newElement('audio', Object.assign(base, { asset: mid, name: /^Media \d+$/.test(nm) ? 'Audio' : nm.replace(/\.[a-z0-9]+$/i, ''), rot: 0 })));
+                continue;
+              }
+              if (mid && /^data:video\//.test(assets[mid])) {
+                slide.elements.push(M.newElement('video', Object.assign(base, { kind: 'file', asset: mid })));
                 continue;
               }
             }

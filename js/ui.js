@@ -330,6 +330,11 @@
       if (one && B.model.isTextual(one)) items.push({ label: 'Edit Text', icon: 'edit', action: () => E.startEdit(one.id, { selectAll: false }) });
       if (one && one.type === 'chart') items.push({ label: 'Edit Data…', icon: 'table_chart', action: () => B.dialogs.chart(one) });
       if (one && one.type === 'equation') items.push({ label: 'Edit Equation…', icon: 'functions', action: () => B.dialogs.equation(one) });
+      if (one && one.type === 'audio')
+        items.push(
+          { label: B.media.isPreviewing(one.id) ? 'Pause' : 'Play', icon: B.media.isPreviewing(one.id) ? 'pause' : 'play_arrow', action: () => B.media.togglePreview(one) },
+          { label: 'Replace Audio…', icon: 'library_music', action: () => B.media.replace(one) }
+        );
       if (one && one.type === 'image') items.push({ label: 'Change Picture…', icon: 'image', action: () => B.actions.changePicture() }, { label: 'Edit Alt Text…', icon: 'text_snippet', action: () => B.actions.altText() });
       items.push(
         {

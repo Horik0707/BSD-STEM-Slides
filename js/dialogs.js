@@ -434,6 +434,92 @@
     });
   };
 
+  /* ======================= set up slide show ======================= */
+  D.setupShow = () => {
+    const deck = A.deck;
+    const st = { showMode: deck.showMode || 'manual', slideDuration: deck.slideDuration || 5, autoAudio: deck.autoAudio !== false, waitForAudio: deck.waitForAudio !== false, loop: !!deck.loop };
+    const per = deck.slides.map((s) => (s.advanceAfter == null ? '' : s.advanceAfter));
+    const unit = B.isBook(deck) ? 'page' : 'slide';
+    const radio = (v, title, sub) => {
+      const r = h('input', { type: 'radio', name: 'showmode', value: v });
+      r.checked = st.showMode === v;
+      r.addEventListener('change', () => {
+        st.showMode = v;
+        sync();
+      });
+      return h('label', { class: 'bs-radio' }, r, h('span', {}, h('b', {}, title), h('small', {}, sub)));
+    };
+    const dur = h('input', { type: 'number', class: 'field sm', min: 1, max: 3600, step: 1, value: st.slideDuration, style: { width: '84px' } });
+    dur.addEventListener('input', () => {
+      st.slideDuration = U.clamp(parseFloat(dur.value) || 5, 1, 3600);
+      U.$$('.setup-sec', table).forEach((i) => (i.placeholder = st.slideDuration));
+      total();
+    });
+    const cb = (label, key) => {
+      const i = h('input', { type: 'checkbox' });
+      i.checked = st[key];
+      i.addEventListener('change', () => (st[key] = i.checked));
+      return h('label', { class: 'pane-check' }, i, h('span', {}, label));
+    };
+    const table = h('div', { class: 'setup-list' });
+    const totalEl = h('span', { class: 'help' });
+    const total = () => {
+      const secs = deck.slides.reduce((t, s, i) => t + (s.hidden ? 0 : per[i] === '' ? st.slideDuration : +per[i]), 0);
+      totalEl.textContent = `Total running time: about ${U.fmtTime(secs * 1000)} (plus animations and audio).`;
+    };
+    deck.slides.forEach((s, i) => {
+      const t = s.elements.find((e) => e.placeholder === 'title');
+      const name = (t && U.htmlToText(t.html).split('\n')[0]) || `${unit[0].toUpperCase() + unit.slice(1)} ${i + 1}`;
+      const inp = h('input', { type: 'number', class: 'field sm setup-sec', min: 1, max: 3600, step: 1, value: per[i], placeholder: st.slideDuration, 'aria-label': `Seconds for ${name}` });
+      inp.addEventListener('input', () => {
+        per[i] = inp.value === '' ? '' : U.clamp(parseFloat(inp.value) || st.slideDuration, 0.5, 3600);
+        total();
+      });
+      table.appendChild(h('div', { class: 'setup-row' + (s.hidden ? ' hidden-slide' : '') }, h('span', { class: 'setup-num' }, String(i + 1)), h('span', { class: 'setup-name', title: name }, name + (s.hidden ? ' (hidden)' : '')), inp, h('span', { class: 'help' }, 's')));
+    });
+    const reset = h('button', { class: 'btn sm', type: 'button', html: U.icon('restart_alt') + 'Use the default for every ' + unit });
+    reset.addEventListener('click', () => {
+      per.fill('');
+      U.$$('.setup-sec', table).forEach((i) => (i.value = ''));
+      total();
+    });
+    const autoBox = h('div', { class: 'setup-auto' },
+      h('label', { class: 'field-label inline' }, `Show each ${unit} for`, dur, 'seconds'),
+      cb('Play all audio automatically', 'autoAudio'),
+      cb(`Wait for audio to finish before the next ${unit}`, 'waitForAudio'),
+      h('div', { class: 'cp-label' }, `Time per ${unit} (leave blank to use the default)`),
+      table,
+      h('div', { class: 'btn-row' }, reset, totalEl));
+    const sync = () => autoBox.classList.toggle('off', st.showMode !== 'auto');
+    const body = h('div', { class: 'form setup-show' },
+      radio('manual', 'Manually', `Click, tap or press a key to move on. Audio plays when you click its speaker icon (or on the next click, if set).`),
+      radio('auto', 'Automatically (timed)', `Each ${unit} advances on its own after the time you set. Animations and audio play by themselves — great for kiosks and recorded lessons.`),
+      autoBox,
+      cb('Loop continuously until Esc', 'loop'));
+    sync();
+    total();
+    B.ui.modal({
+      title: 'Set Up Slide Show',
+      body,
+      width: 560,
+      buttons: [
+        { label: 'Cancel', value: null },
+        {
+          label: 'OK',
+          primary: true,
+          action: () => {
+            Object.assign(deck, st);
+            deck.slides.forEach((s, i) => (s.advanceAfter = per[i] === '' ? null : +per[i]));
+            if (st.showMode === 'auto') deck.useTimings = true;
+            B.store.commit();
+            B.emit('content');
+            B.ribbon.update();
+          },
+        },
+      ],
+    });
+  };
+
   /* ======================= find & replace ======================= */
   let findState = { q: '', pos: null };
   const textual = (el) => el.html != null || el.rows;

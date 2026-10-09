@@ -29,6 +29,7 @@ Presentations save automatically in the browser you're using. To move work to an
 - Charts (column, bar, line, area, pie, doughnut and scatter with a trendline) with a spreadsheet-style data editor. You can paste cells from Excel or Google Sheets, or import a CSV.
 - **Equations**: a LaTeX editor with a live preview, a template palette and common formulas (quadratic formula, Newton's laws, photosynthesis and more).
 - Symbol picker (Greek, math, arrows, science, super/subscript), WordArt, and YouTube or local video.
+- **Audio** (Insert ▸ Audio): upload a sound file (MP3, WAV, M4A, OGG and more) or **record from your microphone**. A speaker icon goes on the slide with a play bar. The Playback tab sets how it starts (When Clicked On, On Next Click, Automatically), volume, loop, play across slides, hide during show and rewind. Recordings are converted to WAV when exported, so they play in PowerPoint.
 - STEM diagrams: process, cycle, Venn, timeline, hierarchy, atom model and coordinate axes.
 - Ten themes with matching colors and fonts, custom slide backgrounds (solid, gradient, picture), 16:9, 4:3 or 8.5 × 11 book pages, slide numbers and footers.
 
@@ -37,6 +38,7 @@ Presentations save automatically in the browser you're using. To move work to an
 - Full-screen slide show with pen, highlighter, eraser and laser pointer. Other controls: black/white screen, go-to-slide by number, a slide overview (G), auto-advance timings and looping.
 - **Presenter View** shows a timer, a clock, the next slide or animation and your notes. It can open a second **Audience Window** for the projector that stays in sync.
 - Reading View for presenting inside a window.
+- **Set Up Slide Show** (Slide Show tab) chooses **Manual** (click to advance) or **Automatic (timed)**. Set how many seconds each slide stays up, with optional per-slide times. Automatic shows play animations and all audio on their own, can wait for a slide's audio to finish, and can loop. Press S or the toolbar button to pause and resume; a thin bar shows the time left on the slide.
 
 **Book format (8.5 × 11)**
 - Choose **Book** under File ▸ New, or switch any deck with Design ▸ Slide Size. Pages are US Letter portrait (8.5 × 11 in) with their own page layouts. Editing works exactly like slides.
